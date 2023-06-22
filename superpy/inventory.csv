@@ -1,5 +1,9 @@
-Date,Item,Quantity
-2023-06-17,Milk,1
-2023-06-17,Safraan,45
-2023-06-17,Pistashio,6
-2023-06-17,Cake,12
+date,product_name,product_price,expire_date
+2023-06-22,Houlou,2.35
+2023-06-22,Houlou,2.35
+2023-06-22,Houlou,2.35
+2023-06-22,Houlou,2.35
+2023-06-22,Houlou,2.35,
+2023-06-22,Houlou,2.35,None
+2023-06-22,Houlou,2.35,2023-06-22
+2023-06-22,Houlou,2.35,None

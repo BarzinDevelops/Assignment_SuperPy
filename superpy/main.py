@@ -14,19 +14,61 @@ __human_name__ = "superpy"
 
 def main():
     parser = argparse.ArgumentParser(
-        usage="Supermarket Inventory Tool.",
-        # description="Supermarket Inventory Tool.",
+        description="Supermarket Inventory Tool.",
         )
-    parser.add_argument('pos', type=str, help='some positional arg.')
-    parser.add_argument('--item', type=str, help='Name of the item to add to Inventory.')
-    parser.add_argument('--quantity', type=int, help='Quantity of this item to add to Inventory.')
+    
+    # indicating: to buy or to sell
+    parser.add_argument(
+        '--action', 
+        choices=['buy', 'sel'],
+        metavar='buy or sel',          
+        type=str, 
+        help='Choose if you want to buy or sel the product.'
+        )
+
+    # getting arguments
+    parser.add_argument(
+        '-pn', '--prod_name', 
+        metavar='', 
+        type=str, 
+        help='Name of the product to add.'
+        )
+    parser.add_argument(
+        '-pp', '--price',
+        metavar='', 
+        type=float, 
+        help='Price of the product to add.'
+        )
+    parser.add_argument(
+        '-exp', '--expires',
+        metavar='', 
+        type=str, 
+        default="None",
+        help='The date of expiration (e.g., 2023-06-18)'
+        )
     
     args = parser.parse_args()
-    item = args.item
-    quantity = args.quantity
     
-    if item is not None and quantity is not None:
-        update_inventory(item, quantity)
+    
+    args = parser.parse_args()
+    # print(f"args: {args}")
+    print(f"args.action: {args.action}")
+    print(f"args.prod_name: {args.prod_name}")
+    print(f"args.price: {args.price}")
+
+
+    # if args.action == 'buy':
+    #     print(f"args.expires: {args.expires}")
+    #     buy_prod_name = args.prod_name
+    #     buy_price = args.price
+    #     expire_date = args.expires
+    # elif args.action == 'sel':
+    #     sell_prod_name = args.prod_name
+    #     sell_price = args.price
+
+            
+    if args.prod_name is not None and args.price is not None:
+        update_inventory(args.prod_name, args.price, args.expires)
     else:
         inventory = read_inventory()
         for i, item in enumerate(inventory):
@@ -50,7 +92,7 @@ def read_inventory():
         print(f"The file '{filename}' does not exist. Creating a new file.")
         with open(filename, 'w', newline='') as file:
             writer = csv.writer(file)
-            writer.writerow(['Date', 'Item', 'Quantity'])  # Write the headers to the new file
+            writer.writerow(['Date', 'product_name', 'product_price', 'expire_date'])  # Write the headers to the new file
     return inventory
 
 def write_inventory(inventory):
@@ -58,14 +100,14 @@ def write_inventory(inventory):
     overwriting the existing contents."""
     with open('inventory.csv', 'w', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow(['Date', 'Item', 'Quantity'])
+        writer.writerow(['date', 'product_name', 'product_price', 'expire_date'])
         writer.writerows(inventory)
 
-def update_inventory(item, quantity):
+def update_inventory(product_name, product_price,expire_date):
     """The update_inventory function reads the existing inventory, appends a new row with the current date, 
     item name, and quantity, and then writes the updated inventory back to the CSV file using the write_inventory function. Finally, it prints a success message."""
     inventory = read_inventory()
-    inventory.append([str(date.today()), item.title(), str(quantity)])
+    inventory.append([str(date.today()), product_name.title(), str(product_price), expire_date])
     write_inventory(inventory)
     
 
