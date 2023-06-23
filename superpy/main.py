@@ -3,6 +3,8 @@ import os
 import argparse
 import csv
 from datetime import date
+# using pandas to read from and write to files:
+import pandas as pd
 
 # Do not change these lines.
 __winc_id__ = "a2bc36ea784242e4989deb157d527ba0"
@@ -49,66 +51,41 @@ def main():
     
     args = parser.parse_args()
     
+    read_or_create_csv_file('buy.csv')
+#--------------------------------------------
+
+
+# reading from the file if exists, otherwise create it:
+def read_or_create_csv_file(filename):
+    try:
+        data = pd.read_csv(filename)
+        # data['id'] = range(1, len(data) + 1)
+        # data.set_index('id', inplace=True)
+        # data.to_csv('buy.csv', index=True)
+        if len(data) > 0:
+            print(f"The content of {filename} is: \n{data}")
+        else:
+            colnames = ",\n".join(data.columns)
+            print(f"This file has no data, only these columns:\n{colnames}")
+    except FileNotFoundError:
+        print(f"This file doesn't exist yet!")
+        create_custom_csv_file(filename)
+
+
+def create_custom_csv_file(filename):
+    user_answer = input("\nDo you want to create a new csv file with your own columns? (enter: 'y' or 'n'): ").lower()
     
-    args = parser.parse_args()
-    # print(f"args: {args}")
-    print(f"args.action: {args.action}")
-    print(f"args.prod_name: {args.prod_name}")
-    print(f"args.price: {args.price}")
-
-
-    # if args.action == 'buy':
-    #     print(f"args.expires: {args.expires}")
-    #     buy_prod_name = args.prod_name
-    #     buy_price = args.price
-    #     expire_date = args.expires
-    # elif args.action == 'sel':
-    #     sell_prod_name = args.prod_name
-    #     sell_price = args.price
-
-            
-    if args.prod_name is not None and args.price is not None:
-        update_inventory(args.prod_name, args.price, args.expires)
+    if user_answer == 'y':
+        column_names = input("\nEnter column names you want (separated by commas): ").split(',')
+        try:
+            print(f"\nCreating your new csv file...")
+            df = pd.DataFrame(columns=column_names)
+            df.to_csv(filename, index=False)
+            print(f"\nThe file: {filename} is created.")
+        except FileExistsError:
+            print(f"\nThis file: {filename}, already exists!")
     else:
-        inventory = read_inventory()
-        for i, item in enumerate(inventory):
-            print(f"inventory item{i+1}:\n{inventory[i]}")
-
-def read_inventory():
-    """The read_inventory function reads the inventory data from a CSV file named 'inventory.csv' and returns it as a list of rows."""
-    inventory = []
-    filename = 'inventory.csv'
-    
-    if os.path.exists(filename):
-        with open(filename, 'r') as file:
-            reader = csv.reader(file)
-            try:
-                next(reader)  # Skip the header row
-                for row in reader:
-                    inventory.append(row)
-            except StopIteration:
-                pass  # Empty file, no rows to read
-    else:
-        print(f"The file '{filename}' does not exist. Creating a new file.")
-        with open(filename, 'w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(['Date', 'product_name', 'product_price', 'expire_date'])  # Write the headers to the new file
-    return inventory
-
-def write_inventory(inventory):
-    """The write_inventory function takes the inventory data as input and writes it back to the CSV file, 
-    overwriting the existing contents."""
-    with open('inventory.csv', 'w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(['date', 'product_name', 'product_price', 'expire_date'])
-        writer.writerows(inventory)
-
-def update_inventory(product_name, product_price,expire_date):
-    """The update_inventory function reads the existing inventory, appends a new row with the current date, 
-    item name, and quantity, and then writes the updated inventory back to the CSV file using the write_inventory function. Finally, it prints a success message."""
-    inventory = read_inventory()
-    inventory.append([str(date.today()), product_name.title(), str(product_price), expire_date])
-    write_inventory(inventory)
+        print("\nNo problem. Good luck.")
     
 
 if __name__ == "__main__":
