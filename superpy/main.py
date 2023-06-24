@@ -7,12 +7,16 @@ from datetime import date
 import pandas as pd
 
 # Do not change these lines.
-__winc_id__ = "a2bc36ea784242e4989deb157d527ba0"
-__human_name__ = "superpy"
+# __winc_id__ = "a2bc36ea784242e4989deb157d527ba0"
+# __human_name__ = "superpy"
 
 
 # Your code below this line.
+#------------------------------------------
 
+# Set pandas display options
+pd.set_option('display.width', None)  # Allow unlimited width
+pd.set_option('display.max_columns', None)  # Show all columns
 
 def main():
     parser = argparse.ArgumentParser(
@@ -36,22 +40,33 @@ def main():
         help='Name of the product to add.'
         )
     parser.add_argument(
-        '-pp', '--price',
+        '-q', '--quantity', 
+        metavar='', 
+        type=str, 
+        help='How many of this product to add.'
+        )
+    parser.add_argument(
+        '-pp', '--prod_price',
         metavar='', 
         type=float, 
         help='Price of the product to add.'
         )
     parser.add_argument(
-        '-exp', '--expires',
+        '-exp', '--exp_date',
         metavar='', 
         type=str, 
         default="None",
-        help='The date of expiration (e.g., 2023-06-18)'
+        help='Date of expiration (e.g., 2023-06-18)'
         )
     
     args = parser.parse_args()
     
-    read_or_create_csv_file('buy.csv')
+    # setting values of a row:
+    current_date = date.today().strftime('%Y-%m-%d')
+    received_args_series = pd.Series([current_date,args.prod_name,args.quantity, args.prod_price, args.exp_date])
+
+    update_csv_data('buy.csv', received_args_series)
+    # read_or_create_csv_file('buy.csv')
 #--------------------------------------------
 
 
@@ -59,14 +74,12 @@ def main():
 def read_or_create_csv_file(filename):
     try:
         data = pd.read_csv(filename)
-        # data['id'] = range(1, len(data) + 1)
-        # data.set_index('id', inplace=True)
-        # data.to_csv('buy.csv', index=True)
         if len(data) > 0:
-            print(f"The content of {filename} is: \n{data}")
+            return data
         else:
-            colnames = ",\n".join(data.columns)
-            print(f"This file has no data, only these columns:\n{colnames}")
+            colnames = " | ".join(data.columns)
+            return f"This file: '{filename}' -> has no data yet, only these predefined columns:\n{colnames} |"
+        
     except FileNotFoundError:
         print(f"This file doesn't exist yet!")
         create_custom_csv_file(filename)
@@ -87,6 +100,32 @@ def create_custom_csv_file(filename):
     else:
         print("\nNo problem. Good luck.")
     
+def update_csv_data(filename, new_data):
+    # Read existing CSV file into a DataFrame
+    data = pd.read_csv(filename)
+
+    # Generate an auto-incremented ID
+    new_id = len(data) + 1
+
+    # Create a new DataFrame with ID and other data
+    new_row = pd.DataFrame([[new_id] + list(new_data)], columns=['id'] + list(data.columns[1:]))
+
+    # Concatenate the new row with the existing DataFrame
+    updated_data = pd.concat([data, new_row], ignore_index=True)
+
+    # Write the updated DataFrame back to the CSV file
+    updated_data.to_csv(filename, index=False)
+
+
+
+
+    
+    # current_data = read_or_create_csv_file(filename)
+    # print(current_data.to_string(index=False, justify='center'))
+
+
+        
+        
 
 if __name__ == "__main__":
     main()

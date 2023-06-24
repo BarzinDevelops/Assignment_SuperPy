@@ -1,1 +1,5 @@
-id,date,product_name,product_price,expire_date
+id,date,product_name,product_quantity,product_price,expire_date
+1,2023-06-24,orange,0.75,2023-06-30,
+2,2023-06-24,watermelon,3.11,2024-11-3,
+3,2023-06-24,papaya,2.0,,
+4,2023-06-24,watermelon,12,3.11,2024-11-3

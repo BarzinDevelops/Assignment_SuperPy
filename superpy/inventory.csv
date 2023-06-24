@@ -1,9 +1,2 @@
-id,date,product_name,product_price,expire_date
-1,2023-06-22,Houlou,2.35,
-2,2023-06-22,Houlou,2.35,
-3,2023-06-22,Houlou,2.35,
-4,2023-06-22,Houlou,2.35,
-5,2023-06-22,Houlou,2.35,
-6,2023-06-22,Houlou,2.35,
-7,2023-06-22,Houlou,2.35,2023-06-22
-8,2023-06-22,Houlou,2.35,
+id,date,product_name,product_quantity,product_price,expire_date
+1,2023-06-22,Houlou,4,2.35,
