@@ -96,5 +96,13 @@ def advance_time(number):
     with open('time.txt', 'w') as f:
         f.write(str(new_date))
         
-        
+def reset_date_in_time_file():
+    """
+    Set date in the time.txt file to '2023-01-01' as symbolic date 
+    that represents current date in the application.
+    Execute every time the application starts.
+    """
+    with open('time.txt', 'w') as f:
+        f.write('2023-01-01')
+            
  

@@ -23,7 +23,7 @@ reverse_tab3 = '\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b'
 
 
 def main():
-    
+    reset_date_in_time_file()
     parser = argparse.ArgumentParser(
         description="Supermarket Inventory Tool.",
         formatter_class=argparse.RawTextHelpFormatter
