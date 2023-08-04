@@ -1,6 +1,6 @@
 # All the IMPORTS:
 # ------------------------------------------#
-from datetime import datetime as dt, timedelta
+from datetime import datetime as dt, timedelta, date
 import pandas as pd # using pandas to read from and write to files:
 import numpy as np
 
@@ -147,12 +147,15 @@ def advance_time(number):
     current_date = get_current_date()
     advance = timedelta(number)
     new_date = current_date + advance
+    print(f"""in advance_time(number)--> 'new_date = {new_date}'
+          'current_date = {current_date}' and
+          'advance = {advance}' """)
     with open('time.txt', 'w') as f:
         f.write(str(new_date))
 # --------------------------------------------------------------------#        
 def reset_date_in_time_file(custom_date='2023-07-01'):
     """
-    Set date in the time.txt file to '2023-01-01' as symbolic date 
+    Set date in the time.txt file to '2023-07-01' as symbolic date 
     that represents current date in the application.
     Execute every time the application starts.
     """
@@ -160,5 +163,21 @@ def reset_date_in_time_file(custom_date='2023-07-01'):
         f.write(custom_date)
         
 # ---------------------------------------------------------------------#
-            
- 
+def check_if_has_run_today():
+    with open('last_run_day.txt') as f:
+        last_run_day_was = f.readline()
+        last_run_day_was = dt.strptime(last_run_day_was, '%Y-%m-%d').date()
+    return last_run_day_was
+
+def check_before_reset_date():
+    last_run_date = check_if_has_run_today()
+    todays_date = date.today()
+    print(f"""check_before_reset_date() values: -> 
+          last_run_date value ==> {last_run_date}, last_run_date type ==> {type(last_run_date)}
+          todays_date ==> {todays_date}, todays_date type==> {type(todays_date)}
+          last_run_date != todays_date => {last_run_date != todays_date}""")
+    print('---'*30)
+    if last_run_date != todays_date:
+        reset_date_in_time_file()
+        with open('last_run_day.txt', 'w') as f:
+            f.write(str(todays_date))

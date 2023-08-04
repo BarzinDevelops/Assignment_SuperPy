@@ -21,8 +21,10 @@ reverse_tab = '\b\b\b\b\b'
 reverse_tab2 = '\b\b\b\b\b\b\b\b\b\b'
 reverse_tab3 = '\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b'
 
-
 def main():
+
+    print(f"today is: {date.today()}")
+    
     parser = argparse.ArgumentParser(
         description="Supermarket Inventory Tool.",
         formatter_class=argparse.RawTextHelpFormatter
@@ -30,9 +32,14 @@ def main():
 
     subparsers = parser.add_subparsers(
         dest='action',
-        help='Choose which action you want to take: buy/sell/report '
+        help='Choose which action you want to take: buy/sell/report'
         )
- 
+    parser.add_argument(
+        '--advance_time',
+        metavar='',
+        type=str,
+        help='Specify how many days you want to go in future.'
+    )
     buy_parser = subparsers.add_parser('buy')
     buy_parser.add_argument(
         'buy_name',
@@ -79,7 +86,16 @@ def main():
         help=f"""Choose what kind of report you want: [inventory, revenue, profit]"""
     )
 
-    args = parser.parse_args()    
+    args = parser.parse_args()   
+    
+    # Check if --advance_time argument is present
+    if args.advance_time:
+        #first print the current date as saved in time.txt file:
+        print(f"Current date in the application is --> {get_current_date()}")
+        # Call the advance_time function with the specified number of days
+        advance_time(int(args.advance_time)) 
+        # print what your advanced time action did to the previous date in time.txt:
+        print(f"Now the the date in time.txt file is --> {get_current_date()}")
 
     # determine if the input is for buy/sell and set the received_args_series accordingly:
     if args.action=='buy':
@@ -96,11 +112,10 @@ def main():
         received_args_series = pd.Series([get_current_date(),args.sell_name,args.sell_amount, args.sell_price])
         col_names = ['id', 'sell_date', 'sell_name', 'sell_amount', 'sell_price']
         update_csv_data('sold.csv', col_names, received_args_series, )
-
+        # todo: need to update invenrory.csv like you did with buy action!!
 #--------------------------------------------
 
-
-
 if __name__ == "__main__":
-    reset_date_in_time_file('2023-07-21')
+    # check_if_has_run_today()
+    check_before_reset_date()
     main()
