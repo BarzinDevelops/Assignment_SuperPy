@@ -2,6 +2,7 @@
 # ------------------------------------------#
 from datetime import datetime as dt, timedelta
 import pandas as pd # using pandas to read from and write to files:
+import numpy as np
 
 # ------------------------------------------#
 
@@ -19,7 +20,7 @@ def read_or_create_csv_file(filename, col_names, new_data):
         print(f"This file doesn't exist yet!")
         print("You will be redirected to file creator...")
         create_custom_csv_file(filename, col_names, new_data)
-
+# ---------------------------------------------------------------------#
 
 def create_custom_csv_file(filename, col_names, new_data):
     try:
@@ -33,7 +34,55 @@ def create_custom_csv_file(filename, col_names, new_data):
         print(f"\nThis file: {filename}, already exists!")
     except ValueError as e:
             print(e)
+# ---------------------------------------------------------------------#
+
+
+def update_inventory(source_file):
+    try:
+        inventory_col_names = ['id', 'buy_date', 'buy_name', 'buy_amount', 'buy_price', 'expire_date']
+        read_or_create_csv_file('inventory.csv', inventory_col_names, [])
     
+    except Exception as e:
+        # Handle the error
+        print("in update_invetory() -> An error occurred while reading the file ---->", e)
+        return 
+    
+    try:
+        # Read 'bought.csv' into a DataFrame
+        bought_data = pd.read_csv(source_file)
+        
+        # Read 'inventory.csv' into a DataFrame
+        inventory_data = pd.read_csv('inventory.csv')
+        
+    except Exception as e:
+        # Handle the error
+        print("An error occurred while reading the file ---->", e)
+        return
+    
+    # Generate an auto-incremented ID for each row in 'bought.csv'
+    new_ids = range(len(inventory_data) + 1, len(inventory_data) + 1 + len(bought_data))
+    
+    # Add the new IDs to the 'id' column of 'bought_data'
+    bought_data['id'] = new_ids
+    
+    # Concatenate 'bought_data' with 'inventory_data'
+    updated_data = pd.concat([inventory_data, bought_data], ignore_index=True)
+    
+    # Write the updated DataFrame back to 'inventory.csv'
+    updated_data.to_csv('inventory.csv', index=False)
+
+# Call the function with the 'bought.csv' file
+# update_inventory('bought.csv')
+
+
+
+
+
+
+
+# ---------------------------------------------------------------------#
+
+
 def update_csv_data(filename, col_names, new_data):
     try:
         read_or_create_csv_file(filename, col_names, new_data)
@@ -49,16 +98,21 @@ def update_csv_data(filename, col_names, new_data):
     new_id = len(data) + 1
 
     # Create a new DataFrame with ID and other data
-    new_row = pd.DataFrame([[new_id] + list(new_data)], columns=['id'] + list(data.columns[1:]))
-
+    # check if file is 'inventory.csv'-> it shoul also 
+    # contain a bought_id field that contains the id of the bought item.
+    if filename == 'bought.csv' or filename == 'sold.csv':
+        new_row = pd.DataFrame([[new_id] + 
+                                list(new_data)], 
+                                columns=['id'] + 
+                                list(data.columns[1:]))
+    
     # Concatenate the new row with the existing DataFrame
     updated_data = pd.concat([data, new_row], ignore_index=True)
 
     # Write the updated DataFrame back to the CSV file
     updated_data.to_csv(filename, index=False)
-
-    # current_data = read_or_create_csv_file(filename)
-    # print(current_data.to_string(index=False, justify='center'))
+    
+# ---------------------------------------------------------------------#
 
 def calculate_revenue_profit(bought_filename, sold_filename, inventory_filename):
 
@@ -81,28 +135,30 @@ def calculate_revenue_profit(bought_filename, sold_filename, inventory_filename)
     # Save the inventory data (including revenue and profit) to the inventory CSV file
     inventory_data = merged_data[['buy_name', 'buy_amount', 'buy_price', 'revenue', 'profit']]
     inventory_data.to_csv(inventory_filename, index=False)
-
+# ---------------------------------------------------------------------#
 
 def get_current_date():
     # setting values of a row:
     with open('time.txt') as f:
         today = f.readline()
     return dt.strptime(today, '%Y-%m-%d').date()
-
+# ---------------------------------------------------------------------#
 def advance_time(number):
     current_date = get_current_date()
     advance = timedelta(number)
     new_date = current_date + advance
     with open('time.txt', 'w') as f:
         f.write(str(new_date))
-        
-def reset_date_in_time_file():
+# --------------------------------------------------------------------#        
+def reset_date_in_time_file(custom_date='2023-07-01'):
     """
     Set date in the time.txt file to '2023-01-01' as symbolic date 
     that represents current date in the application.
     Execute every time the application starts.
     """
     with open('time.txt', 'w') as f:
-        f.write('2023-01-01')
+        f.write(custom_date)
+        
+# ---------------------------------------------------------------------#
             
  

@@ -23,7 +23,6 @@ reverse_tab3 = '\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b'
 
 
 def main():
-    reset_date_in_time_file()
     parser = argparse.ArgumentParser(
         description="Supermarket Inventory Tool.",
         formatter_class=argparse.RawTextHelpFormatter
@@ -83,28 +82,25 @@ def main():
     args = parser.parse_args()    
 
     # determine if the input is for buy/sell and set the received_args_series accordingly:
-    print(args)
     if args.action=='buy':
         #if bought:
-        received_args_series = pd.Series([current_date,args.buy_name,args.buy_amount, args.buy_price, args.expire_date])
-        col_names = ['id', 'buy_date', 'buy_name', 'buy_amount', 'buy_price', 'expire_date']
-        update_csv_data('bought.csv', col_names, received_args_series)
+        received_args_series = pd.Series([get_current_date(),args.buy_name,args.buy_amount, args.buy_price, args.expire_date])
+        
+        buy_col_names = ['id', 'buy_date', 'buy_name', 'buy_amount', 'buy_price', 'expire_date']
+        
+        update_csv_data('bought.csv', buy_col_names, received_args_series)
+        update_inventory('bought.csv')
+    
     elif args.action=='sell':
          #if sold:  
-        received_args_series = pd.Series([current_date,args.sell_name,args.sell_amount, args.sell_price])
+        received_args_series = pd.Series([get_current_date(),args.sell_name,args.sell_amount, args.sell_price])
         col_names = ['id', 'sell_date', 'sell_name', 'sell_amount', 'sell_price']
         update_csv_data('sold.csv', col_names, received_args_series, )
 
-    # Example usage
-    # df =  pd.read_csv('inventory.csv')
-    # print(f"\nfrom inventory.csv :\n{line}\n{df.to_string(index=False)}")
-    # calculate_revenue_profit('bought.csv', 'sold.csv', 'inventory.csv')
-    print(get_current_date())
-    advance_time(10)
-    print(get_current_date())
 #--------------------------------------------
 
 
 
 if __name__ == "__main__":
+    reset_date_in_time_file('2023-07-21')
     main()
