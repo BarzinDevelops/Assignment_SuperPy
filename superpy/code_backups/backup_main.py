@@ -1,6 +1,8 @@
 # Imports
 import argparse
 from functions import * 
+from rich.console import Console
+from rich.table import Table
 
 # Do not change these lines.
 # __winc_id__ = "a2bc36ea784242e4989deb157d527ba0"
@@ -21,8 +23,9 @@ reverse_tab = '\b\b\b\b\b'
 reverse_tab2 = '\b\b\b\b\b\b\b\b\b\b'
 reverse_tab3 = '\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b'
 
-
 def main():
+
+    # print(f"today is: {date.today()}")
     
     parser = argparse.ArgumentParser(
         description="Supermarket Inventory Tool.",
@@ -31,9 +34,14 @@ def main():
 
     subparsers = parser.add_subparsers(
         dest='action',
-        help='Choose which action you want to take: buy/sell/report '
+        help='Choose which action you want to take: buy/sell/report'
         )
- 
+    parser.add_argument(
+        '--advance_time',
+        metavar='',
+        type=str,
+        help='Specify how many days you want to go in future.'
+    )
     buy_parser = subparsers.add_parser('buy')
     buy_parser.add_argument(
         'buy_name',
@@ -71,40 +79,65 @@ def main():
         type=float, 
         help='Specify the price of the product being sold')
 
+    # report_parser = subparsers.add_parser('report')
+    # report_parser.add_argument(
+    #     'report_type', 
+    #     choices=['inventory', 'revenue', 'profit'], 
+    #     metavar='report_type', 
+    #     type=str,
+    #     help=f"""Choose what kind of report you want: [inventory, revenue, profit]"""
+    # )
+    
     report_parser = subparsers.add_parser('report')
     report_parser.add_argument(
-        'report_type', 
-        choices=['inventory', 'revenue', 'profit'], 
-        metavar='report_type', 
+        'report_type',
+        choices=['inventory', 'revenue', 'profit', 'expired'],  # Add 'expired' as a choice
+        metavar='report_type',
         type=str,
-        help=f"""Choose what kind of report you want: [inventory, revenue, profit]"""
+        help=f"Choose what kind of report you want: [inventory, revenue, profit, expired]"  # Add 'expired'
     )
 
-    args = parser.parse_args()    
+
+    args = parser.parse_args()   
+    
+    # Check if --advance_time argument is present
+    if args.advance_time:
+        #first print the current date as saved in time.txt file:
+        print(f"Current date in the application is --> {get_current_date()}")
+        # Call the advance_time function with the specified number of days
+        advance_time(int(args.advance_time)) 
+        # print what your advanced time action did to the previous date in time.txt:
+        print(f"Now the the date in time.txt file is --> {get_current_date()}")
 
     # determine if the input is for buy/sell and set the received_args_series accordingly:
-    print(args)
     if args.action=='buy':
         #if bought:
-        received_args_series = pd.Series([current_date,args.buy_name,args.buy_amount, args.buy_price, args.expire_date])
-        col_names = ['id', 'buy_date', 'buy_name', 'buy_amount', 'buy_price', 'expire_date']
-        update_csv_data('bought.csv', col_names, received_args_series)
-    elif args.action=='sell':
-         #if sold:  
-        received_args_series = pd.Series([current_date,args.sell_name,args.sell_amount, args.sell_price])
-        col_names = ['id', 'sell_date', 'sell_name', 'sell_amount', 'sell_price']
-        update_csv_data('sold.csv', col_names, received_args_series, )
-
-    # Example usage
-    # df =  pd.read_csv('inventory.csv')
-    # print(f"\nfrom inventory.csv :\n{line}\n{df.to_string(index=False)}")
-    # calculate_revenue_profit('bought.csv', 'sold.csv', 'inventory.csv')
-    print(get_current_date())
-    advance_time(10)
-    print(get_current_date())
+        received_args_series = pd.Series([get_current_date(),args.buy_name,args.buy_amount, args.buy_price, args.expire_date])
+        
+        buy_col_names = ['id', 'buy_date', 'buy_name', 'buy_amount', 'buy_price', 'expire_date']
+        
+        update_csv_data('bought.csv', buy_col_names, received_args_series)
+        update_inventory('bought.csv')
+    
+    
+########################## SELL ACTIONS ##############################
+    elif args.action == 'sell':
+        # Sell action
+        sell_action(args.sell_name, args.sell_amount, args.sell_price)
+    elif args.action == 'report':
+        if args.report_type == 'expired':
+            check_expired_products()
+        elif args.report_type == 'inventory':
+            generate_inventory_report()
+        elif args.report_type == 'revenue':
+            generate_revenue_report()
+        elif args.report_type == 'profit':
+            generate_profit_report()
+    else:
+        print("Invalid action. Please choose 'buy', 'sell', or 'report'.")
 #--------------------------------------------
 
-
-
 if __name__ == "__main__":
+    # check_if_has_run_today()
+    check_before_reset_date()
     main()

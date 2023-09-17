@@ -1,2 +1,2 @@
-id,sell_date,sell_name,sell_amount,sell_price
-1,2023-07-21,volle melk 1ltr,4,2.3
+sell_id,sell_date,sell_name,sell_amount,sell_price
+1,2023-07-01,volle melk 1ltr,2,2.3
