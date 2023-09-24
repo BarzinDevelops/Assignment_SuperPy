@@ -56,13 +56,17 @@ def main():
         print(f"Current date in the application is --> {get_current_date()}")
         advance_time(int(args.advance_time))
         print(f"Now the date in time.txt file is --> {get_current_date()}")
+    
     elif args.action == 'buy':
         product_name = args.buy_name
         amount = args.buy_amount
         price = args.buy_price
 
-        # Call the shared buy_product function
-        buy_product(product_name, amount, price)       
+        # Extract the expire_date argument
+        expire_date = args.expire_date
+
+        # Call the shared buy_product function with the correct arguments
+        buy_product(product_name, amount, price, expire_date)  # Pass expire_date as an argument   
         
     elif args.action == 'sell':
         sell_action(args.sell_name, args.sell_amount, args.sell_price)

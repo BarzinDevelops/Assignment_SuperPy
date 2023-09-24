@@ -105,7 +105,7 @@ def update_inventory(source_file):
 
 
 # ---------------------------------------------------------------------#
-def buy_product(product_name, amount, price):
+def buy_product(product_name, amount, price, expire_date):
     try:
         # Get the current date
         current_date = get_current_date()
@@ -123,7 +123,7 @@ def buy_product(product_name, amount, price):
             'buy_name': product_name,
             'buy_amount': amount,
             'buy_price': price,
-            'expire_date': '',  # Fill this in appropriately
+            'expire_date': expire_date,  # Include the expire_date
         }
 
         # Create the data for the 'inventory.csv' file
@@ -135,13 +135,17 @@ def buy_product(product_name, amount, price):
             'buy_name': product_name,
             'buy_amount': amount,
             'buy_price': price,
-            'expire_date': '',  # Fill this in appropriately
+            'expire_date': expire_date,  # Include the expire_date
             'is_expired': 'False',  # Initially not expired
         }
 
         # Update the CSV files
         update_csv_data('bought.csv', buy_col_names, bought_data)
         update_csv_data('inventory.csv', inventory_col_names, inventory_data)
+
+        # Print the data that is being saved
+        print("Data being saved to bought.csv:", bought_data)
+        print("Data being saved to inventory.csv:", inventory_data)
 
         print("Product successfully bought.")
     except Exception as e:
@@ -164,8 +168,6 @@ def get_next_id(filename):
 
     
 # ---------------------------------------------------------------------#
-# ---------------------------------------------------------------------#
-
 
 def update_csv_data(filename, columns, data):
     print(f"\n=========START of => update_csv_data(filename, columns, data)===============\n")
@@ -174,18 +176,40 @@ def update_csv_data(filename, columns, data):
     if not os.path.exists(filename):
         df = pd.DataFrame(columns=columns)
         df.to_csv(filename, index=False)
-
+    
     # Append the new data to the existing data
-    updated_data = pd.DataFrame([data], columns=columns)  # Wrap data in a list
+    new_line = ','.join([str(data[col]) for col in columns]) + '\n'
 
-    # Save the updated data to the CSV file
-    updated_data.to_csv(filename, mode='a', header=False, index=False)  # Append mode, no header
+    # Read existing lines and remove unnecessary empty lines
+    with open(filename, 'r') as file:
+        lines = file.readlines()
+    
+    # Remove empty or whitespace-only lines
+    lines = [line for line in lines if line.strip()]
+
+    # Check if the last line is empty or contains only spaces
+    with open(filename, 'w') as file:
+        for line in lines:
+            file.write(line)
+
+        cursor_position = file.tell()
+
+        # If the file is empty or cursor is not at the end of a line, add a newline
+        if cursor_position == 0 or cursor_position > 0 and lines[-1][-1] != '\n':
+            file.write('\n')
+
+        # Write the new line
+        file.write(new_line)
 
     print(f"Updated {filename} with new data.")
 
     print(f"\n=========END of => update_csv_data(filename, columns, data)===============\n")
 
-    
+
+
+
+
+
 # ---------------------------------------------------------------------#
 
 def calculate_revenue_profit(bought_filename, sold_filename, inventory_filename):
