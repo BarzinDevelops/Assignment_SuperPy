@@ -8,8 +8,18 @@ import os
 # ------------------------------------------#
 line = '-' * 20  # for underlining some columns
 
-# reading from the file if exists, otherwise create it:
 def read_or_create_csv_file(filename, col_names, new_data):
+    """
+    Read data from a CSV file if it exists, otherwise create it.
+    
+    Args:
+        filename (str): Name of the CSV file.
+        col_names (list): List of column names for the CSV file.
+        new_data (list): New data to be added to the file if it's created.
+        
+    Returns:
+        pd.DataFrame: DataFrame containing the data from the CSV file.
+    """
     try:
         data = pd.read_csv(filename)
         if len(data) > 0:
@@ -82,7 +92,7 @@ def update_inventory(source_file):
     updated_data = updated_data[updated_data['buy_amount'] > 0]
 
     # Write the updated DataFrame back to 'inventory.csv'
-    updated_data.to_csv('inventory.csv', index=False)
+    updated_data.to_csv('inventory.csv', index=False, mode='w', header=True)  # Overwrite mode, with header
 
 
 
@@ -95,7 +105,69 @@ def update_inventory(source_file):
 
 
 # ---------------------------------------------------------------------#
+def buy_product(product_name, amount, price, expire_date):
+    try:
+        # Get the current date
+        current_date = get_current_date()
 
+        # Get the next available buy ID
+        next_buy_id = get_next_id('bought.csv')
+
+        # Define column names for 'bought.csv'
+        buy_col_names = ['buy_id', 'buy_date', 'buy_name', 'buy_amount', 'buy_price', 'expire_date']
+
+        # Create the data for the 'bought.csv' file
+        bought_data = {
+            'buy_id': next_buy_id,
+            'buy_date': str(current_date),
+            'buy_name': product_name,
+            'buy_amount': amount,
+            'buy_price': price,
+            'expire_date': expire_date,  # Include the expire_date
+        }
+
+        # Create the data for the 'inventory.csv' file
+        inventory_col_names = ['inventory_id', 'buy_id', 'buy_date', 'buy_name', 'buy_amount', 'buy_price', 'expire_date', 'is_expired']
+        inventory_data = {
+            'inventory_id': next_buy_id,  # Use the same ID as buy_id
+            'buy_id': next_buy_id,
+            'buy_date': str(current_date),
+            'buy_name': product_name,
+            'buy_amount': amount,
+            'buy_price': price,
+            'expire_date': expire_date,  # Include the expire_date
+            'is_expired': 'False',  # Initially not expired
+        }
+
+        # Update the CSV files
+        update_csv_data('bought.csv', buy_col_names, bought_data)
+        update_csv_data('inventory.csv', inventory_col_names, inventory_data)
+
+        # Print the data that is being saved
+        print("Data being saved to bought.csv:", bought_data)
+        print("Data being saved to inventory.csv:", inventory_data)
+
+        print("Product successfully bought.")
+    except Exception as e:
+        print("An error occurred while buying the product ---->", e)
+        
+
+def get_next_id(filename):
+    print(f"\n=========START of => get_next_id(filename)===============\n")
+    try:
+        data = pd.read_csv(filename)
+        if data.empty:
+            return 1
+        last_id = data['buy_id'].max()
+        print(f"\n=========END of => get_next_id(filename)===============\n")
+        return int(last_id) + 1
+    except FileNotFoundError:
+        print(f"\n=========END of => get_next_id(filename)===============\n")
+        return 1
+    
+
+    
+# ---------------------------------------------------------------------#
 
 def update_csv_data(filename, columns, data):
     print(f"\n=========START of => update_csv_data(filename, columns, data)===============\n")
@@ -104,23 +176,40 @@ def update_csv_data(filename, columns, data):
     if not os.path.exists(filename):
         df = pd.DataFrame(columns=columns)
         df.to_csv(filename, index=False)
-
-
-
-    # Read the existing data from the CSV file
-    existing_data = pd.read_csv(filename)
-
-    # Append the new data to the existing data
-    updated_data = pd.concat([existing_data, data], ignore_index=True)
-
-    # Save the updated data to the CSV file
-    updated_data.to_csv(filename, index=False)
     
+    # Append the new data to the existing data
+    new_line = ','.join([str(data[col]) for col in columns]) + '\n'
+
+    # Read existing lines and remove unnecessary empty lines
+    with open(filename, 'r') as file:
+        lines = file.readlines()
+    
+    # Remove empty or whitespace-only lines
+    lines = [line for line in lines if line.strip()]
+
+    # Check if the last line is empty or contains only spaces
+    with open(filename, 'w') as file:
+        for line in lines:
+            file.write(line)
+
+        cursor_position = file.tell()
+
+        # If the file is empty or cursor is not at the end of a line, add a newline
+        if cursor_position == 0 or cursor_position > 0 and lines[-1][-1] != '\n':
+            file.write('\n')
+
+        # Write the new line
+        file.write(new_line)
+
     print(f"Updated {filename} with new data.")
 
     print(f"\n=========END of => update_csv_data(filename, columns, data)===============\n")
 
-    
+
+
+
+
+
 # ---------------------------------------------------------------------#
 
 def calculate_revenue_profit(bought_filename, sold_filename, inventory_filename):
@@ -153,26 +242,37 @@ def get_current_date():
     return dt.strptime(today, '%Y-%m-%d').date()
 # ---------------------------------------------------------------------#
 def advance_time(number):
+    """
+    Advance the current date in the 'time.txt' file by a specified number of days.
+    
+    Args:
+        number (int): Number of days to advance the date.
+    """
     current_date = get_current_date()
     advance = timedelta(number)
     new_date = current_date + advance
-    # print(f"""in advance_time(number)--> 'new_date = {new_date}'
-    #       'current_date = {current_date}' and
-    #       'advance = {advance}' """)
     with open('time.txt', 'w') as f:
         f.write(str(new_date))
 # --------------------------------------------------------------------#        
 def reset_date_in_time_file(custom_date='2023-07-01'):
     """
-    Set date in the time.txt file to '2023-07-01' as symbolic date 
-    that represents current date in the application.
-    Execute every time the application starts.
+    Set date in the 'time.txt' file to a specified date.
+    This function is executed every time the application starts.
+    
+    Args:
+        custom_date (str): Date to set in the 'time.txt' file (default: '2023-07-01').
     """
     with open('time.txt', 'w') as f:
         f.write(custom_date)
         
 # ---------------------------------------------------------------------#
 def check_if_has_run_today():
+    """
+    Check if the application has run today by comparing with the date in 'last_run_day.txt'.
+    
+    Returns:
+        date: Date from 'last_run_day.txt' file.
+    """
     print(f"\n======START of => def check_if_has_run_today()======\n")
     with open('last_run_day.txt') as f:
         last_run_day_was = f.readline()
@@ -181,6 +281,10 @@ def check_if_has_run_today():
     return last_run_day_was
 
 def check_before_reset_date():
+    """
+    Check if the application has run today, and reset the date if needed.
+    This function is executed every time the application starts.
+    """
     print(f"\n======START of => def check_before_reset_date()======\n")
     last_run_date = check_if_has_run_today()
     todays_date = date.today()
@@ -216,7 +320,7 @@ def check_expired_products():
         print("An error occurred while checking for expired products ---->", e)
     print(f"\n=========START of => sell_action(name, amount, price)===============\n")
 
-
+#-------------------------------------------------------------------------------------------------
 
 def sell_action(name, amount, price):
     print(f"\n=========START of => def sell_action(name, amount, price)===============\n")
@@ -250,7 +354,7 @@ def sell_action(name, amount, price):
         return
 
 
-      # Calculate revenue and profit for this sale
+    # Calculate revenue and profit for this sale
     revenue = amount * price
     profit = revenue - (product_inventory['buy_price'] * amount).sum()
 
@@ -268,7 +372,7 @@ def sell_action(name, amount, price):
     print("Sale successful.")
     print(f"\n=========END of => sell_action(name, amount, price)===============\n")
 
-
+#----------------------------------------------------------------------------------------------------
 
 
 def update_inventory_after_sell(name, amount):

@@ -37,7 +37,7 @@ def main():
     buy_parser.add_argument('buy_name', type=str, help='Specify the name of the product.')
     buy_parser.add_argument('buy_amount', type=int, help='Specify the amount of the product you want.')
     buy_parser.add_argument('buy_price', type=float, help='Specify the price of the product.')
-    buy_parser.add_argument('--expire_date', metavar='', type=str, help='Provide expire date (year-month-day)')
+    buy_parser.add_argument('expire_date', metavar='', type=str, help='Provide expire date (year-month-day)')
 
     sell_parser = subparsers.add_parser('sell')
     sell_parser.add_argument('sell_name', type=str, help='Specify the name of the product being sold')
@@ -61,8 +61,6 @@ def main():
         product_name = args.buy_name
         amount = args.buy_amount
         price = args.buy_price
-
-        # Extract the expire_date argument
         expire_date = args.expire_date
 
         # Call the shared buy_product function with the correct arguments

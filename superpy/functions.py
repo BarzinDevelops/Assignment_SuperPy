@@ -151,23 +151,35 @@ def buy_product(product_name, amount, price, expire_date):
     except Exception as e:
         print("An error occurred while buying the product ---->", e)
         
+#------------------------------------------------------------------------------------------------------
 
 def get_next_id(filename):
     print(f"\n=========START of => get_next_id(filename)===============\n")
     try:
-        data = pd.read_csv(filename)
-        if data.empty:
-            return 1
-        last_id = data['buy_id'].max()
+        if os.path.exists(filename):
+            # Read the existing data and get the last sell_id
+            data = pd.read_csv(filename)
+            if data.empty or 'sell_id' not in data.columns:
+                print(f"The file does not contain valid 'sell_id' data. Starting with ID 1.")
+                new_id = 1
+            else:
+                last_id = data['sell_id'].max()
+                new_id = int(last_id) + 1
+        else:
+            print("The file does not exist. Creating a new one.")
+            new_id = 1
+
         print(f"\n=========END of => get_next_id(filename)===============\n")
-        return int(last_id) + 1
+        return new_id
     except FileNotFoundError:
+        print("An error occurred while getting the next ID.")
         print(f"\n=========END of => get_next_id(filename)===============\n")
         return 1
-    
+
+
 
     
-# ---------------------------------------------------------------------#
+# ---------------------------------------------------------------------------------------------------#
 
 def update_csv_data(filename, columns, data):
     print(f"\n=========START of => update_csv_data(filename, columns, data)===============\n")
@@ -320,7 +332,7 @@ def check_expired_products():
         print("An error occurred while checking for expired products ---->", e)
     print(f"\n=========START of => sell_action(name, amount, price)===============\n")
 
-
+#----------------------------------------------------------------------------------------------------------
 
 def sell_action(name, amount, price):
     print(f"\n=========START of => def sell_action(name, amount, price)===============\n")
@@ -353,51 +365,67 @@ def sell_action(name, amount, price):
         print("Error: Price cannot be negative.")
         return
 
-
-      # Calculate revenue and profit for this sale
-    revenue = amount * price
-    profit = revenue - (product_inventory['buy_price'] * amount).sum()
+    # Generate a unique sell_id for the sale
+    sell_id = get_next_id('sold.csv')
 
     # Add the sale data to the 'sold.csv' file
-    new_sale = pd.DataFrame({'sell_id': [sell_id], 'sell_date': [get_current_date()], 'sell_name': [name], 'sell_amount': [amount], 'sell_price': [price]})
+    sold_col_names = ['sell_id', 'sell_date', 'sell_name', 'sell_amount', 'sell_price']
+    new_sale = pd.DataFrame({'sell_id': [sell_id], 'sell_date': [str(get_current_date())], 'sell_name': [name], 'sell_amount': [amount], 'sell_price': [price]})
+
+    # Read 'sold.csv' into a DataFrame
+    try:
+        sold_data = pd.read_csv('sold.csv')
+    except FileNotFoundError:
+        sold_data = pd.DataFrame(columns=sold_col_names)
+
+    # Concatenate the new sale data with existing sold data
     sold_data = pd.concat([sold_data, new_sale], ignore_index=True)
-    update_csv_data('sold.csv', sold_col_names, sold_data)
 
-    # Update the 'inventory.csv' file with the new quantity
-    inventory_data.loc[inventory_data['buy_name'] == name, 'buy_amount'] -= amount
+    # Write the updated DataFrame back to the 'sold.csv' file
+    sold_data.to_csv('sold.csv', index=False)
 
-    # Save the updated inventory data to the 'inventory.csv' file
-    inventory_data.to_csv('inventory.csv', index=False)
+    # Update the inventory after the sale
+    update_inventory_after_sell(name, amount)
 
     print("Sale successful.")
     print(f"\n=========END of => sell_action(name, amount, price)===============\n")
 
 
 
+#----------------------------------------------------------------------------------------------------------
 
 def update_inventory_after_sell(name, amount):
     print(f"\n======START of => def update_inventory_after_sell(name, amount)======\n")
-    # Read 'inventory.csv' into a DataFrame
-    inventory_data = pd.read_csv('inventory.csv')
+    try:
+        # Read 'inventory.csv' into a DataFrame
+        inventory_data = pd.read_csv('inventory.csv')
 
-    # Update the sold amount in the 'inventory.csv' file
-    product_inventory = inventory_data[inventory_data['buy_name'] == name]
-    product_inventory.loc[product_inventory.index[-1], 'sell_amount'] += amount
+        # Find the product in the inventory
+        product_inventory = inventory_data[inventory_data['buy_name'] == name]
 
-    # Update the expired amount in the 'inventory.csv' file
-    current_date = get_current_date()
-    expired_product_inventory = product_inventory[product_inventory['expire_date'] < current_date]
-    if not expired_product_inventory.empty:
-        product_inventory.loc[product_inventory.index[-1], 'expired_amount'] += expired_product_inventory['sell_amount'].sum()
+        if len(product_inventory) == 0:
+            print(f"Error: Product '{name}' not found in inventory.")
+            return
 
-    # Check if the product is sold out (the available amount is less than 1) and remove it from inventory
-    available_quantity = product_inventory['buy_amount'].sum() - product_inventory['sell_amount'].sum()
-    if available_quantity < 1:
-        inventory_data = inventory_data[inventory_data['buy_name'] != name]
+        if amount > product_inventory['buy_amount'].sum():
+            print(f"Error: Not enough quantity of '{name}' available to sell.")
+            return
 
-    # Write the updated DataFrame back to the 'inventory.csv' file
-    inventory_data.to_csv('inventory.csv', index=False)
-    print(f"\n======END of => def update_inventory_after_sell(name, amount)======\n")
+        # Update the sold amount in the 'inventory.csv' file
+        inventory_data.loc[inventory_data['buy_name'] == name, 'buy_amount'] -= amount
+
+        # Check if the product is sold out (the available amount is less than 1) and remove it from inventory
+        available_quantity = inventory_data[inventory_data['buy_name'] == name]['buy_amount'].sum()
+        if available_quantity < 1:
+            inventory_data = inventory_data[inventory_data['buy_name'] != name]
+
+        # Write the updated DataFrame back to the 'inventory.csv' file
+        inventory_data.to_csv('inventory.csv', index=False)
+        print(f"\n======END of => def update_inventory_after_sell(name, amount)======\n")
+    except Exception as e:
+        # Handle the error
+        print("An error occurred while updating inventory after sell. Check this function: def update_inventory_after_sell(name, amount) ---->", e)
+
 #-------------------------------------------------------------------------------------
 #==========================generating reports ======================================
 def generate_inventory_report():

@@ -1,12 +1,2 @@
 inventory_id,buy_id,buy_date,buy_name,buy_amount,buy_price,expire_date,is_expired
-1,1,2023-07-21,volle melk 1ltr,2,1.79,2023-12-01,False
-2,2,2023-07-01,Cheetos 300g,1,0.95,2024-12-25,False
-3,3,2023-07-01,Cheetos 300g,1,0.95,2024-12-25,False
-4,4,2023-07-01,Cheetos 300g,1,0.95,2024-12-25,False
-5,5,2023-07-01,Cheetos 300g,1,0.95,2024-12-25,False
-6,6,2023-07-01,Cheetos 300g,1,0.95,2024-12-25,False
-7,7,2023-07-01,Cheetos 300g,1,0.95,2024-12-25,False
-8,8,2023-07-01,Cheetos 300g,1,0.95,2024-12-25,False
-9,9,2023-07-01,Cheetos 300g,1,0.95,2024-12-25,False
-10,10,2023-07-01,Cheetos 300g,1,0.95,2024-12-25,False
-11,11,2023-07-01,Noodles Extra Pittig 100g,20,0.45,2025-01-25,False
+1,1,2023-07-01,Noodles Extra Pittig 100g,20,0.45,2023-01-25,False
