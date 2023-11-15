@@ -2,13 +2,17 @@
 # ------------------------------------------#
 from datetime import datetime as dt, timedelta, date
 import pandas as pd # using pandas to read from and write to files:
-import numpy as np
 import os
+import reporting_logic
+from config import SuperConfig
 
-# ------------------------------------------#
+
+# ---------------------------------------------------------------------#
 line = '-' * 20  # for underlining some columns
-
+# ---------------------------------------------------------------------#
 def read_or_create_csv_file(filename, col_names, new_data):
+    #REMOVE## file_path = os.path.join('outputs', filename)
+    file_path = os.path.join('outputs', filename)
     """
     Read data from a CSV file if it exists, otherwise create it.
     
@@ -21,7 +25,7 @@ def read_or_create_csv_file(filename, col_names, new_data):
         pd.DataFrame: DataFrame containing the data from the CSV file.
     """
     try:
-        data = pd.read_csv(filename)
+        data = pd.read_csv(file_path, on_bad_lines='skip')  # hier is even geprobeerd met on_bad_lines='skip'
         if len(data) > 0:
             return data
         else:
@@ -30,15 +34,15 @@ def read_or_create_csv_file(filename, col_names, new_data):
     except FileNotFoundError:
         print(f"This file doesn't exist yet!")
         print("You will be redirected to file creator...")
-        create_custom_csv_file(filename, col_names, new_data)
+        create_custom_csv_file(file_path, col_names, new_data)
 # ---------------------------------------------------------------------#
-
 def create_custom_csv_file(filename, col_names, new_data):
+    file_path = os.path.join('outputs', filename)
     try:
         print(f"\nCreating your new csv file...")        
         # print(f"NEW DATA is NOW -----------------> \n{new_data}")
         df = pd.DataFrame(columns=col_names)
-        df.to_csv(filename, index=False)
+        df.to_csv(file_path, index=False)
         print(f"\nThe file: {filename} is created.")
         # read_or_create_csv_file(filename)
     except FileExistsError:
@@ -46,67 +50,84 @@ def create_custom_csv_file(filename, col_names, new_data):
     except ValueError as e:
             print(e)
 # ---------------------------------------------------------------------#
+def update_inventory_expire_status():
+    try:
+        inventory_col_names = ['inventory_id', 'buy_id', 'buy_date', 'buy_name', 'buy_amount', 'buy_price', 'expire_date', 'is_expired']
+        inventory_data = read_or_create_csv_file('inventory.csv', inventory_col_names, [])
 
+        # Convert 'expire_date' column to datetime64[ns] type
+        inventory_data['expire_date'] = pd.to_datetime(inventory_data['expire_date'])
+        # Convert current_date to datetime64[ns]
+        current_date = pd.to_datetime(get_current_date())  # Convert to datetime64[ns]
 
+        # Update is_expired status based on expiration date
+        inventory_data['is_expired'] = inventory_data['expire_date'] < current_date
+
+        # Save the updated inventory data to CSV
+        inventory_data.to_csv('inventory.csv', index=False)
+    except Exception as e:
+        # Handle the error
+        print("An error occurred while updating inventory expiration status ---->", e)
+# ---------------------------------------------------------------------#
 def update_inventory(source_file):
+    update_inventory_expire_status()
     try:
         inventory_col_names = ['id', 'buy_date', 'buy_name', 'buy_amount', 'buy_price', 'expire_date', 'is_expired']
         inventory_data = read_or_create_csv_file('inventory.csv', inventory_col_names, [])
+
+        try:
+            # Read 'bought.csv' into a DataFrame
+            bought_data = pd.read_csv(source_file)
+
+            # Read 'inventory.csv' into a DataFrame
+            inventory_data = pd.read_csv('inventory.csv', index_col=False)
+
+        except Exception as e:
+            print("An error occurred while reading the file ---->", e)
+            return
+
+        # Generate an auto-incremented ID for each row in 'bought.csv'
+        new_ids = range(len(inventory_data) + 1, len(inventory_data) + 1 + len(bought_data))
+
+        # Add the new IDs to the 'id' column of 'bought_data'
+        bought_data['id'] = new_ids
+
+        # Concatenate 'bought_data' with 'inventory_data'
+        updated_data = pd.concat([inventory_data, bought_data], ignore_index=True)
+
+        # Convert 'expire_date' column to datetime64[ns] type
+        updated_data['expire_date'] = pd.to_datetime(updated_data['expire_date'])
+
+        # Convert current_date to datetime64[ns]
+        current_date = pd.to_datetime(get_current_date())
+
+        # Check for expired products and update 'is_expired' field
+        updated_data['is_expired'] = updated_data['expire_date'] < current_date
+
+        # Remove duplicates based on 'buy_name' and 'expire_date'
+        updated_data.drop_duplicates(subset=['buy_name', 'expire_date'], keep='last', inplace=True)
+
+        # Check if the product is sold out and remove it from inventory
+        updated_data = updated_data[updated_data['buy_amount'] > 0]
+
+        # Write the updated DataFrame back to 'inventory.csv'
+        updated_data.to_csv('inventory.csv', index=False, mode='w', header=True)  # Overwrite mode, with header
+
+        print("Inventory updated successfully.")
     except Exception as e:
-        print("An error occurred while reading the file ---->", e)
-        return
-
-    try:
-        # Read 'bought.csv' into a DataFrame
-        bought_data = pd.read_csv(source_file)
-
-        # Read 'inventory.csv' into a DataFrame
-        inventory_data = pd.read_csv('inventory.csv', index_col=False)
-
-    except Exception as e:
-        print("An error occurred while reading the file ---->", e)
-        return
-
-    # Generate an auto-incremented ID for each row in 'bought.csv'
-    new_ids = range(len(inventory_data) + 1, len(inventory_data) + 1 + len(bought_data))
-
-    # Add the new IDs to the 'id' column of 'bought_data'
-    bought_data['id'] = new_ids
-
-    # Concatenate 'bought_data' with 'inventory_data'
-    updated_data = pd.concat([inventory_data, bought_data], ignore_index=True)
-
-    # Convert 'expire_date' column to datetime64[ns] type
-    updated_data['expire_date'] = pd.to_datetime(updated_data['expire_date'])
-
-    # Convert current_date to datetime64[ns]
-    current_date = pd.to_datetime(get_current_date())
-
-    # Check for expired products and update 'is_expired' field
-    updated_data['is_expired'] = updated_data['expire_date'] < current_date
-
-    # Remove duplicates based on 'buy_name' and 'expire_date'
-    updated_data.drop_duplicates(subset=['buy_name', 'expire_date'], keep='last', inplace=True)
-
-    # Check if the product is sold out and remove it from inventory
-    updated_data = updated_data[updated_data['buy_amount'] > 0]
-
-    # Write the updated DataFrame back to 'inventory.csv'
-    updated_data.to_csv('inventory.csv', index=False, mode='w', header=True)  # Overwrite mode, with header
-
-
-
-
-
-
-
-
-
-
-
+        print("An error occurred while updating inventory ---->", e)
 # ---------------------------------------------------------------------#
-def buy_product(product_name, amount, price, expire_date):
+def buy_product(product_name, amount, price, expire_date, inventory_file):
+    global inventory_df
+
     try:
+        # Update the inventory DataFrame
+        if product_name in inventory_df['Product Name'].values:
+            inventory_df.loc[inventory_df['Product Name'] == product_name, 'Bought Amount'] += amount
+        else:
+            new_row = {'Product Name': product_name, 'Bought Amount': amount}
+            inventory_df = inventory_df.append(new_row, ignore_index=True)
+
         # Get the current date
         current_date = get_current_date()
 
@@ -141,20 +162,16 @@ def buy_product(product_name, amount, price, expire_date):
 
         # Update the CSV files
         update_csv_data('bought.csv', buy_col_names, bought_data)
-        update_csv_data('inventory.csv', inventory_col_names, inventory_data)
-
-        # Print the data that is being saved
-        print("Data being saved to bought.csv:", bought_data)
-        print("Data being saved to inventory.csv:", inventory_data)
+        update_csv_data(inventory_file, inventory_col_names, inventory_data)  # Use the correct inventory_file
 
         print("Product successfully bought.")
+        # Update the management report for the purchase
+        
+        reporting_logic.update_management_report(inventory_file, SuperConfig.sold_file, SuperConfig.report_file)
     except Exception as e:
         print("An error occurred while buying the product ---->", e)
-        
-#------------------------------------------------------------------------------------------------------
-
+# ---------------------------------------------------------------------#
 def get_next_id(filename):
-    print(f"\n=========START of => get_next_id(filename)===============\n")
     try:
         if os.path.exists(filename):
             # Read the existing data and get the last sell_id
@@ -169,21 +186,12 @@ def get_next_id(filename):
             print("The file does not exist. Creating a new one.")
             new_id = 1
 
-        print(f"\n=========END of => get_next_id(filename)===============\n")
         return new_id
     except FileNotFoundError:
         print("An error occurred while getting the next ID.")
-        print(f"\n=========END of => get_next_id(filename)===============\n")
-        return 1
-
-
-
-    
-# ---------------------------------------------------------------------------------------------------#
-
+        return 1    
+# ---------------------------------------------------------------------#
 def update_csv_data(filename, columns, data):
-    print(f"\n=========START of => update_csv_data(filename, columns, data)===============\n")
-
     # Check if the file exists and create it if not
     if not os.path.exists(filename):
         df = pd.DataFrame(columns=columns)
@@ -214,16 +222,26 @@ def update_csv_data(filename, columns, data):
         file.write(new_line)
 
     print(f"Updated {filename} with new data.")
-
-    print(f"\n=========END of => update_csv_data(filename, columns, data)===============\n")
-
-
-
-
-
-
 # ---------------------------------------------------------------------#
+def calculate_profit(amount_bought, price_bought, amount_sold, price_sold):
+    """
+    Calculate profit based on amount bought, price bought, amount sold, and price sold.
 
+    Parameters:
+    amount_bought (float): Amount of product bought.
+    price_bought (float): Price at which the product was bought.
+    amount_sold (float): Amount of product sold.
+    price_sold (float): Price at which the product was sold.
+
+    Returns:
+    float: Calculated profit.
+    """
+    revenue = amount_sold * price_sold
+    cost = amount_bought * price_bought
+    profit = revenue - cost
+
+    return profit
+# ---------------------------------------------------------------------#
 def calculate_revenue_profit(bought_filename, sold_filename, inventory_filename):
 
     # Read bought and sold data from CSV files
@@ -246,7 +264,6 @@ def calculate_revenue_profit(bought_filename, sold_filename, inventory_filename)
     inventory_data = merged_data[['buy_name', 'buy_amount', 'buy_price', 'revenue', 'profit']]
     inventory_data.to_csv(inventory_filename, index=False)
 # ---------------------------------------------------------------------#
-
 def get_current_date():
     # setting values of a row:
     with open('time.txt') as f:
@@ -265,7 +282,7 @@ def advance_time(number):
     new_date = current_date + advance
     with open('time.txt', 'w') as f:
         f.write(str(new_date))
-# --------------------------------------------------------------------#        
+# ---------------------------------------------------------------------#
 def reset_date_in_time_file(custom_date='2023-07-01'):
     """
     Set date in the 'time.txt' file to a specified date.
@@ -275,8 +292,7 @@ def reset_date_in_time_file(custom_date='2023-07-01'):
         custom_date (str): Date to set in the 'time.txt' file (default: '2023-07-01').
     """
     with open('time.txt', 'w') as f:
-        f.write(custom_date)
-        
+        f.write(custom_date)      
 # ---------------------------------------------------------------------#
 def check_if_has_run_today():
     """
@@ -285,31 +301,24 @@ def check_if_has_run_today():
     Returns:
         date: Date from 'last_run_day.txt' file.
     """
-    print(f"\n======START of => def check_if_has_run_today()======\n")
     with open('last_run_day.txt') as f:
         last_run_day_was = f.readline()
         last_run_day_was = dt.strptime(last_run_day_was, '%Y-%m-%d').date()
-    print(f"\n======END of => def check_if_has_run_today()======\n")
     return last_run_day_was
-
+# ---------------------------------------------------------------------#
 def check_before_reset_date():
     """
     Check if the application has run today, and reset the date if needed.
     This function is executed every time the application starts.
     """
-    print(f"\n======START of => def check_before_reset_date()======\n")
     last_run_date = check_if_has_run_today()
     todays_date = date.today()
     if last_run_date != todays_date:
         reset_date_in_time_file()
         with open('last_run_day.txt', 'w') as f:
             f.write(str(todays_date))
-    print(f"\n======END of => def check_before_reset_date()======\n")
-
-
-#=======================================SELL Implementation =============================
+# ---------------------------------------------------------------------#
 def check_expired_products():
-    print(f"\n=========START of => def check_expired_products()===============\n")
     try:
         inventory_col_names = ['id', 'buy_date', 'buy_name', 'buy_amount', 'buy_price', 'expire_date']
         inventory_data = read_or_create_csv_file('inventory.csv', inventory_col_names, [])
@@ -330,28 +339,34 @@ def check_expired_products():
     except Exception as e:
         # Handle the error
         print("An error occurred while checking for expired products ---->", e)
-    print(f"\n=========START of => sell_action(name, amount, price)===============\n")
-
-#----------------------------------------------------------------------------------------------------------
-
-def sell_action(name, amount, price):
-    print(f"\n=========START of => def sell_action(name, amount, price)===============\n")
-
+# ---------------------------------------------------------------------#
+def sell_action(name, amount, price, inventory_df):
+    # Update inventory expiration status
+    update_inventory_expire_status()
+    
     inventory_col_names = ['id', 'buy_date', 'buy_name', 'buy_amount', 'buy_price', 'expire_date']
     inventory_data = read_or_create_csv_file('inventory.csv', inventory_col_names, [])
 
     # Convert 'expire_date' column to datetime64[ns] type
     inventory_data['expire_date'] = pd.to_datetime(inventory_data['expire_date'])
 
+    # Strip leading and trailing spaces from the product name for comparison
+    name_stripped = name.strip()
+
     # Filter products that match the name and have non-zero amount
-    product_inventory = inventory_data[(inventory_data['buy_name'] == name) & (inventory_data['buy_amount'] > 0)]
+    product_inventory = inventory_df[(inventory_df['buy_name'].str.strip() == name_stripped) & (inventory_df['buy_amount'] > 0)]
 
     if len(product_inventory) == 0:
         print(f"Error: Product '{name}' is out of stock and cannot be sold.")
         return
 
     current_date = pd.to_datetime(get_current_date())
-    expired_product_inventory = product_inventory[product_inventory['expire_date'] < current_date]
+    expired_product_inventory = product_inventory[pd.to_datetime(product_inventory['expire_date']) < current_date]
+
+    # Print the inventory data for the specified product
+    product_inventory = inventory_df[(inventory_df['buy_name'].str.strip() == name_stripped)]
+    print("Inventory data for the product:")
+    print(product_inventory)
 
     if len(expired_product_inventory) > 0:
         print(f"Error: Product '{name}' is expired and cannot be sold.")
@@ -365,37 +380,25 @@ def sell_action(name, amount, price):
         print("Error: Price cannot be negative.")
         return
 
-    # Generate a unique sell_id for the sale
-    sell_id = get_next_id('sold.csv')
-
-    # Add the sale data to the 'sold.csv' file
-    sold_col_names = ['sell_id', 'sell_date', 'sell_name', 'sell_amount', 'sell_price']
-    new_sale = pd.DataFrame({'sell_id': [sell_id], 'sell_date': [str(get_current_date())], 'sell_name': [name], 'sell_amount': [amount], 'sell_price': [price]})
-
-    # Read 'sold.csv' into a DataFrame
-    try:
-        sold_data = pd.read_csv('sold.csv')
-    except FileNotFoundError:
-        sold_data = pd.DataFrame(columns=sold_col_names)
-
-    # Concatenate the new sale data with existing sold data
-    sold_data = pd.concat([sold_data, new_sale], ignore_index=True)
-
-    # Write the updated DataFrame back to the 'sold.csv' file
-    sold_data.to_csv('sold.csv', index=False)
+    # Calculate revenue and profit
+    revenue = amount * price
+    profit = revenue - (amount * product_inventory['buy_price'].values[0])
 
     # Update the inventory after the sale
     update_inventory_after_sell(name, amount)
 
+    # Update the management report for the sale
+    management_report_col_names = ['buy_name', 'buy_amount', 'buy_price', 'sell_amount', 'sell_price', 'is_expired', 'revenue', 'profit']
+    management_report_data = read_or_create_csv_file('management_report.csv', management_report_col_names, [])
+    new_sale_entry = pd.DataFrame({'buy_name': [name], 'buy_amount': [product_inventory['buy_amount'].values[0]], 'buy_price': [product_inventory['buy_price'].values[0]], 
+                                   'sell_amount': [amount], 'sell_price': [price], 'is_expired': [False if len(expired_product_inventory) == 0 else True], 
+                                   'revenue': [revenue], 'profit': [profit]})
+    management_report_data = pd.concat([management_report_data, new_sale_entry], ignore_index=True)
+    management_report_data.to_csv('management_report.csv', index=False)
+
     print("Sale successful.")
-    print(f"\n=========END of => sell_action(name, amount, price)===============\n")
-
-
-
-#----------------------------------------------------------------------------------------------------------
-
+# ---------------------------------------------------------------------#
 def update_inventory_after_sell(name, amount):
-    print(f"\n======START of => def update_inventory_after_sell(name, amount)======\n")
     try:
         # Read 'inventory.csv' into a DataFrame
         inventory_data = pd.read_csv('inventory.csv')
@@ -421,55 +424,37 @@ def update_inventory_after_sell(name, amount):
 
         # Write the updated DataFrame back to the 'inventory.csv' file
         inventory_data.to_csv('inventory.csv', index=False)
-        print(f"\n======END of => def update_inventory_after_sell(name, amount)======\n")
     except Exception as e:
         # Handle the error
         print("An error occurred while updating inventory after sell. Check this function: def update_inventory_after_sell(name, amount) ---->", e)
-
-#-------------------------------------------------------------------------------------
-#==========================generating reports ======================================
-def generate_inventory_report():
-    print(f"\n======START of => def generate_inventory_report()======\n")
+# ---------------------------------------------------------------------#
+def save_to_csv(filename, data):
+    """
+    Save data to a CSV file.
+    """
     try:
-        inventory_col_names = ['id', 'buy_date', 'buy_name', 'buy_amount', 'buy_price', 'expire_date']
-        inventory_data = read_or_create_csv_file('inventory.csv', inventory_col_names, [])
-        print("Inventory Report:")
-        print(line)
-        print(inventory_data.to_string(index=False))
+        data.to_csv(filename, index=False)
+        print(f"Data saved to {filename}")
     except Exception as e:
-        # Handle the error
-        print("An error occurred while generating inventory report ---->", e)
-    print(f"\n======END of => def generate_inventory_report()======\n")
+        print(f"An error occurred while saving to {filename} ---->", e)
+# ---------------------------------------------------------------------#
+def load_csv_to_dataframe(filename):
+    """
+    Load data from a CSV file into a pandas DataFrame.
+    """
+    return pd.read_csv(filename)
+# ---------------------------------------------------------------------#
+def merge_inventory_sell_data(inventory_file, sell_file):
+    inventory_data = pd.read_csv(inventory_file)
+    sell_data = pd.read_csv(sell_file)
+    
+    # Print columns of inventory_data and sell_data
+    print("Columns in inventory_data:", inventory_data.columns)
+    print("Columns in sell_data:", sell_data.columns)
 
-# ... (the rest of the functions are unchanged)
-
-def generate_revenue_report():
-    print(f"\n======START of => def generate_revenue_report()======\n")
-    try:
-        # Calculate revenue and profit data by reading the required files
-        calculate_revenue_profit('bought.csv', 'sold.csv', 'inventory.csv')
-        revenue_col_names = ['buy_name', 'revenue']
-        revenue_data = read_or_create_csv_file('inventory.csv', revenue_col_names, [])
-        print("Revenue Report:")
-        print(line)
-        print(revenue_data.to_string(index=False))
-    except Exception as e:
-        # Handle the error
-        print("An error occurred while generating revenue report ---->", e)
-    print(f"\n======END of => def generate_revenue_report()======\n")
-
-
-def generate_profit_report():
-    print(f"\n======START of => def generate_profit_report()======\n")
-    try:
-        # Calculate revenue and profit data by reading the required files
-        calculate_revenue_profit('bought.csv', 'sold.csv', 'inventory.csv')
-        profit_col_names = ['buy_name', 'profit']
-        profit_data = read_or_create_csv_file('inventory.csv', profit_col_names, [])
-        print("Profit Report:")
-        print(line)
-        print(profit_data.to_string(index=False))
-    except Exception as e:
-        # Handle the error
-        print("An error occurred while generating profit report ---->", e)
-    print(f"\n======END of => def generate_profit_report()======\n")
+    # Merge based on common column 'buy_name'
+    merged_data = pd.merge(inventory_data, sell_data, on='buy_name', how='inner')
+    # maybe try this? -> pd.merge(bought_data, sold_data, left_on='buy_name', right_on='sell_name', how='left')
+    
+    return merged_data
+# ---------------------------------------------------------------------#

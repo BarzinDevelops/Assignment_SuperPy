@@ -1,8 +1,8 @@
 # Imports
-import argparse, pandas as pd
-import functions
-from config import SuperConfig
-import reporting_logic
+import argparse
+from functions import *
+import pandas as pd
+from rich import print as rprint
 
 # Do not change these lines.
 __winc_id__ = "a2bc36ea784242e4989deb157d527ba0"
@@ -22,10 +22,7 @@ reverse_tab = '\b\b\b\b\b'
 reverse_tab2 = '\b\b\b\b\b\b\b\b\b\b'
 reverse_tab3 = '\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b'
 
-
 def main():
-    super_config = SuperConfig()
-    
     parser = argparse.ArgumentParser(
         description="Supermarket Inventory Tool.",
         formatter_class=argparse.RawTextHelpFormatter
@@ -55,47 +52,39 @@ def main():
 
     args = parser.parse_args()
 
-    # Read inventory data and create a DataFrame
-    inventory_col_names = ['inventory_id', 'buy_id', 'buy_date', 'buy_name', 'buy_amount', 'buy_price', 'expire_date', 'is_expired']
-    inventory_df = functions.read_or_create_csv_file('inventory.csv', inventory_col_names, [])
-    
-    
     if args.action == 'time' and args.advance_time:  # Fixing the conditional check
-        print(f"Current date in the application is --> {reporting_logic.get_current_date()}")
-        functions.advance_time(int(args.advance_time))
-        print(f"Now the date in time.txt file is --> {functions.get_current_date()}")
-        functions.update_inventory_expire_status()
+        print(f"Current date in the application is --> {get_current_date()}")
+        advance_time(int(args.advance_time))
+        print(f"Now the date in time.txt file is --> {get_current_date()}")
+        update_inventory_expire_status()
     
     elif args.action == 'buy':
         product_name = args.buy_name
         amount = args.buy_amount
         price = args.buy_price
         expire_date = args.expire_date
-        functions.update_inventory_expire_status()
+        update_inventory_expire_status()
 
         # Call the shared buy_product function with the correct arguments
-        functions.buy_product(product_name, amount, price, expire_date)  # Pass expire_date as an argument   
+        buy_product(product_name, amount, price, expire_date)  # Pass expire_date as an argument   
         
     elif args.action == 'sell':
-        functions.sell_action(args.sell_name, args.sell_amount, args.sell_price, inventory_df)
-        reporting_logic.update_management_report(super_config.inventory_file, super_config.sold_file, super_config.management_report_file)  # Correct arguments here
-        # Add the call to update_expired_items_in_management_report here
-        reporting_logic.update_expired_items_in_management_report()
-        
+        update_inventory_expire_status()
+        sell_action(args.sell_name, args.sell_amount, args.sell_price)
     elif args.action == 'report':
-        functions.update_inventory_expire_status()
+        inventory_file = r'C:\Github\SuperPy\superpy\inventory.csv'
+        update_inventory_expire_status()
         if args.report_type == 'expired':
-            functions.check_expired_products() # Use the check_expired_products function
+            check_expired_products()
         elif args.report_type == 'inventory':
-            reporting_logic.generate_inventory_report() # Use the generate_inventory_report function
+            generate_inventory_report()
         elif args.report_type == 'revenue':
-            # inspection_code()
-            reporting_logic.generate_revenue_report(super_config.inventory_file, super_config.bought_file, super_config.sold_file, super_config.management_report_file) # Use the generate_revenue_report function
+            generate_revenue_report(inventory_file)
         elif args.report_type == 'profit':
-            reporting_logic.generate_profit_report(super_config.inventory_file, super_config.bought_file, super_config.sold_file, super_config.management_report_file) # Use the generate_profit_report function
+            generate_profit_report()
         else:
             print("Invalid report type. Please choose 'inventory', 'revenue', 'profit', or 'expired'.")
 
 if __name__ == "__main__":
-    functions.check_before_reset_date()
+    check_before_reset_date()
     main()
