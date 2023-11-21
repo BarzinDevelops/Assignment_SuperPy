@@ -57,7 +57,7 @@ def main():
 
     # Read inventory data and create a DataFrame
     inventory_col_names = ['inventory_id', 'buy_id', 'buy_date', 'buy_name', 'buy_amount', 'buy_price', 'expire_date', 'is_expired']
-    inventory_df = functions.read_or_create_csv_file('inventory.csv', inventory_col_names, [])
+    # inventory_df = functions.read_or_create_csv_file(super_config.inventory_file, inventory_col_names, [])
     
     
     if args.action == 'time' and args.advance_time:  # Fixing the conditional check
@@ -71,13 +71,16 @@ def main():
         amount = args.buy_amount
         price = args.buy_price
         expire_date = args.expire_date
-        functions.update_inventory_expire_status()
+        # functions.update_inventory_expire_status()
 
+        
+        
+        
         # Call the shared buy_product function with the correct arguments
         functions.buy_product(product_name, amount, price, expire_date)  # Pass expire_date as an argument   
         
     elif args.action == 'sell':
-        functions.sell_action(args.sell_name, args.sell_amount, args.sell_price, inventory_df)
+        # functions.sell_action(args.sell_name, args.sell_amount, args.sell_price, inventory_df)
         reporting_logic.update_management_report(super_config.inventory_file, super_config.sold_file, super_config.management_report_file)  # Correct arguments here
         # Add the call to update_expired_items_in_management_report here
         reporting_logic.update_expired_items_in_management_report()
