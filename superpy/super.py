@@ -54,10 +54,6 @@ def main():
     report_parser.add_argument('report_type', choices=['inventory', 'revenue', 'profit', 'expired'], metavar='report_type', type=str, help="Choose what kind of report you want ['inventory', 'revenue', 'profit', or 'expired']")
 
     args = parser.parse_args()
-
-    # Read inventory data and create a DataFrame
-    inventory_col_names = ['inventory_id', 'buy_id', 'buy_date', 'buy_name', 'buy_amount', 'buy_price', 'expire_date', 'is_expired']
-    # inventory_df = functions.read_or_create_csv_file(super_config.inventory_file, inventory_col_names, [])
     
     
     if args.action == 'time' and args.advance_time:  # Fixing the conditional check
@@ -73,12 +69,12 @@ def main():
         expire_date = args.expire_date
         # functions.update_inventory_expire_status()
 
-        
-        
-        
-        # Call the shared buy_product function with the correct arguments
-        functions.buy_product(product_name, amount, price, expire_date)  # Pass expire_date as an argument   
-        
+        if functions.validate_expire_date_before_buying(expire_date):
+            # Call the shared buy_product function with the correct arguments
+            functions.buy_product(product_name, amount, price, expire_date)  # Pass expire_date as an argument   
+        else:
+            print(f"Error: This Product: '{product_name}' is already expired and cannot be bought!")
+            
     elif args.action == 'sell':
         # functions.sell_action(args.sell_name, args.sell_amount, args.sell_price, inventory_df)
         reporting_logic.update_management_report(super_config.inventory_file, super_config.sold_file, super_config.management_report_file)  # Correct arguments here

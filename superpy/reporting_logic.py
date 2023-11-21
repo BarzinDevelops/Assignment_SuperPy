@@ -52,7 +52,7 @@ def generate_inventory_report():
     
     try:
         inventory_col_names = ['buy_name', 'buy_amount', 'buy_price', 'expire_date', 'is_expired']
-        inventory_data = functions.read_or_create_csv_file('inventory.csv', inventory_col_names, [])      
+        inventory_data = functions.read_or_create_csv_file(super_config.inventory_file, inventory_col_names)      
         table = Table(title="Inventory Report", style='white', box=box.ROUNDED)
         table.add_column("[bold purple]Product Name[/bold purple]")
         table.add_column("[bold dodger_blue3]Amount[/bold dodger_blue3]")
