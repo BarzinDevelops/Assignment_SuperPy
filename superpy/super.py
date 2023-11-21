@@ -76,10 +76,13 @@ def main():
             print(f"Error: This Product: '{product_name}' is already expired and cannot be bought!")
             
     elif args.action == 'sell':
-        # functions.sell_action(args.sell_name, args.sell_amount, args.sell_price, inventory_df)
-        reporting_logic.update_management_report(super_config.inventory_file, super_config.sold_file, super_config.management_report_file)  # Correct arguments here
+        product_name = args.sell_name
+        amount = args.sell_amount
+        price = args.sell_price
+        functions.sell_action(product_name, amount, price)
+        # reporting_logic.update_management_report(super_config.inventory_file, super_config.sold_file, super_config.management_report_file)  # Correct arguments here
         # Add the call to update_expired_items_in_management_report here
-        reporting_logic.update_expired_items_in_management_report()
+        # reporting_logic.update_expired_items_in_management_report()
         
     elif args.action == 'report':
         functions.update_inventory_expire_status()

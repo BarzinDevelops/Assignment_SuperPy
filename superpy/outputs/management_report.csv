@@ -1,1 +1,4 @@
-Product,Total Revenue,Total Sell Amount,Buy Price,Profit
+sell_name,buy_amount,buy_price,sell_amount,sell_price,revenue,buy_name,is_expired,profit
+,1,5.45,1,6.45,6.45,Watermeloen 1kg,False,1.0
+,0,5.45,1,6.45,6.45,Watermeloen 1kg,False,1.0
+,1,5.45,1,6.45,6.45,Watermeloen 1kg,False,1.0
