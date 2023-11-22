@@ -57,10 +57,11 @@ def main():
     
     
     if args.action == 'time' and args.advance_time:  # Fixing the conditional check
-        print(f"Current date in the application is --> {reporting_logic.get_current_date()}")
+        print(f"Current date in the application is --> {functions.get_current_date()}")
         functions.advance_time(int(args.advance_time))
         print(f"Now the date in time.txt file is --> {functions.get_current_date()}")
         functions.update_inventory_expire_status()
+    
     
     elif args.action == 'buy':
         product_name = args.buy_name
