@@ -110,7 +110,7 @@ def get_next_id(filename, id_field_name=None):  # this is numer 2 version of thi
         return 1
 
 # ---------------------------------------------------------------------#
-def update_inventory(bought_file_data):
+def update_inventory(bought_file_data, amount_bought=0):
     print(f"\n======== START OF  update_inventory() function ========\n")
     try:
         inventory_col_names = ['inventory_id', 'buy_id', 'buy_date', 'buy_name', 'buy_amount', 'buy_price', 'expire_date', 'is_expired']
@@ -131,19 +131,24 @@ def update_inventory(bought_file_data):
         print(f"In update_inventory ==> Exception when trying to get sold_df: {e}")
 
     try:        
+ 
+        bought_df['inventory_id'] =  bought_df['buy_id']      
 
-        # Add 'inventory_id' to the 'bought_df'
-        bought_df['inventory_id'] =  bought_df['buy_id']
-        
-        print(f"im right before loop of sold_df in update_inventory()")
-        for i, row in sold_df.iterrows():
-            print(f"{row['sell_name']}", end=', ')
-            print(f"amout: {row['sell_amount']}")
-        
-        
+        # Iterate over rows in sold_df
+        for i, sold_row in sold_df.iterrows():
+            # Use boolean indexing to find matching rows in bought_df
+            matching_rows = bought_df[
+                (bought_df['buy_name'] == sold_row['sell_name'])
+            ]
+
+            # Check if any matching rows are found
+            if not matching_rows.empty:
+                # Deduct the sold amount from the 'buy_amount' column for the matching rows
+                bought_df.loc[matching_rows.index, 'buy_amount'] -= sold_row['sell_amount']
+
         # Concatenate 'inventory_df' and 'bought_df'
         updated_data = pd.concat([inventory_df, bought_df], ignore_index=True)
-        
+
         # Convert 'expire_date' to datetime
         updated_data['expire_date'] = pd.to_datetime(updated_data['expire_date'])
 
@@ -159,14 +164,10 @@ def update_inventory(bought_file_data):
 
         # Save the updated data to 'inventory.csv'
         updated_data.to_csv(super_config.inventory_file, index=False, mode='w', header=True)
-        
-        # updated_data['inventory_id'] = get_next_id(super_config.inventory_file, 'inventory_id')
-        # print(f"updated_data['inventory_id'] ==============>>>>\n{updated_data}")
 
-        
         print(f"\n======== END OF  update_inventory() function ========\n")
         return updated_data  # Return the updated inventory_data
-
+        
     except Exception as e:
         print("An error occurred while updating inventory ---->", e)
         print(f"\n======== END OF  update_inventory() function ========\n")
@@ -218,7 +219,8 @@ def buy_product(product_name, amount, price, expire_date):
         # Save the updated 'bought.csv' file
         bought_df.to_csv(super_config.bought_file, index=False)
         
-        update_inventory(super_config.bought_file)
+         
+        update_inventory(super_config.bought_file, amount)
         
         print(f"\n======== END OF  buy_product() function ========\n")
     except Exception as e:
@@ -400,18 +402,6 @@ def sell_action(name, amount, price):
         print(f"Error: Product '{name}' is out of stock and cannot be sold.")
         return
    
-    """     
-    print(f"inventory_data.loc[(inventory_data['buy_name'] == name)]===================>\n{inventory_data.loc[(inventory_data['buy_name'] == name)]}\n")
-    print(f"length========>  {len(inventory_data.loc[(inventory_data['buy_name'] == name)])}\n\n")
-    
-    print(f"inventory_data.loc[(inventory_data['is_expired'] == False)]===================>\n{inventory_data.loc[(inventory_data['is_expired'] == False)]}\n")
-    print(f"length========>  {len(inventory_data.loc[(inventory_data['is_expired'] == False)])}\n\n")
-    
-    
-    print(f"inventory_data.loc[(inventory_data['is_expired'] == False) & (inventory_data['buy_name'] == name)]====>\n{inventory_data.loc[(inventory_data['is_expired'] == False) & (inventory_data['buy_name'] == name) ]}\n")
-    print(f"length========>  {len(inventory_data.loc[(inventory_data['is_expired'] == False) & (inventory_data['buy_name'] == name) ])}\n\n")
-
-    """
 
     product_not_expired = inventory_data.loc[(inventory_data['buy_name'] == name) & (inventory_data['is_expired'] == False)]
     product_is_expired = inventory_data.loc[(inventory_data['buy_name'] == name) & (inventory_data['is_expired'] == True)]
@@ -428,7 +418,6 @@ def sell_action(name, amount, price):
         return
     else:        
         if sold_df[sold_df['sell_name'] == name].empty:
-
             # Get the next available buy ID
             next_sold_id = get_next_id(super_config.sold_file, 'sell_id')
 
@@ -447,8 +436,6 @@ def sell_action(name, amount, price):
             # Concatenate the new entry to 'bought.csv'
             sold_df = pd.concat([sold_df, new_entry_df], ignore_index=True)
         else:
-            # if len(product_not_expired) > 0:
-            #     sold_df.loc[sold_df['sell_name'] == name, 'sell_amount'] += amount
             sold_df.loc[sold_df['sell_name'] == name, 'sell_amount'] += amount
 
             
