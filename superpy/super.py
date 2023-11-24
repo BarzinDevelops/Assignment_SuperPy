@@ -25,7 +25,7 @@ reverse_tab3 = '\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b'
 
 def main():
     super_config = SuperConfig()
-    
+
     parser = argparse.ArgumentParser(
         description="Supermarket Inventory Tool.",
         formatter_class=argparse.RawTextHelpFormatter
@@ -43,61 +43,72 @@ def main():
     buy_parser.add_argument('expire_date', metavar='', type=str, help='Provide expire date (year-month-day)')
 
     sell_parser = subparsers.add_parser('sell')
-    sell_parser.add_argument('sell_name', type=str, help='Specify the name of the product being sold')
+    sell_parser.add_argument('buy_name', type=str, help='Specify the name of the product being sold')
     sell_parser.add_argument('sell_amount', type=int, help='Specify the amount of the product being sold')
     sell_parser.add_argument('sell_price', type=float, help='Specify the price of the product being sold')
 
     time_parser = subparsers.add_parser('time')
-    time_parser.add_argument('advance_time', type=int, help='Advance the current date by a specified number of days.')
-    
+    time_parser.add_argument('advance_time', type=int, help='Advance the current date by a specified number of days')
+
     report_parser = subparsers.add_parser('report')
-    report_parser.add_argument('report_type', choices=['inventory', 'revenue', 'profit', 'expired'], metavar='report_type', type=str, help="Choose what kind of report you want ['inventory', 'revenue', 'profit', or 'expired']")
+    report_parser.add_argument('report_type', choices=['inventory', 'revenue', 'profit', 'expired'], metavar='report_type',
+                               type=str, help="Choose what kind of report you want ['inventory', 'revenue', 'profit', or 'expired']")
 
     args = parser.parse_args()
-    
-    
-    if args.action == 'time' and args.advance_time:  # Fixing the conditional check
+
+    if args.action == 'time' and args.advance_time:
         print(f"Current date in the application is --> {functions.get_current_date()}")
         functions.advance_time(int(args.advance_time))
         print(f"Now the date in time.txt file is --> {functions.get_current_date()}")
         functions.update_inventory_expire_status()
-    
-    
+
     elif args.action == 'buy':
         product_name = args.buy_name
         amount = args.buy_amount
         price = args.buy_price
         expire_date = args.expire_date
-        # functions.update_inventory_expire_status()
 
         if functions.validate_expire_date_before_buying(expire_date):
-            # Call the shared buy_product function with the correct arguments
-            functions.buy_product(product_name, amount, price, expire_date)  # Pass expire_date as an argument   
+            functions.buy_product(product_name, amount, price, expire_date)
         else:
             print(f"Error: This Product: '{product_name}' is already expired and cannot be bought!")
-            
+
     elif args.action == 'sell':
-        product_name = args.sell_name
+        product_name = args.buy_name
         amount = args.sell_amount
         price = args.sell_price
         functions.sell_action(product_name, amount, price)
-        # reporting_logic.update_management_report(super_config.inventory_file, super_config.sold_file, super_config.management_report_file)  # Correct arguments here
+        reporting_logic.update_management_report(super_config.inventory_file, super_config.sold_file,
+                                                 super_config.management_report_file)
         # Add the call to update_expired_items_in_management_report here
         # reporting_logic.update_expired_items_in_management_report()
-        
+
     elif args.action == 'report':
         functions.update_inventory_expire_status()
+
         if args.report_type == 'expired':
-            functions.check_expired_products() # Use the check_expired_products function
+            functions.check_expired_products()  # Use the check_expired_products function
         elif args.report_type == 'inventory':
-            reporting_logic.generate_inventory_report() # Use the generate_inventory_report function
+            reporting_logic.generate_inventory_report()  # Use the generate_inventory_report function
         elif args.report_type == 'revenue':
-            # inspection_code()
-            reporting_logic.generate_revenue_report(super_config.inventory_file, super_config.bought_file, super_config.sold_file, super_config.management_report_file) # Use the generate_revenue_report function
+            
+            reporting_logic.generate_revenue_report(super_config.inventory_file, super_config.bought_file,
+                                                    super_config.sold_file, super_config.management_report_file)
+            reporting_logic.update_expired_items_in_management_report()
+            # Use the generate_revenue_report function
         elif args.report_type == 'profit':
-            reporting_logic.generate_profit_report(super_config.inventory_file, super_config.bought_file, super_config.sold_file, super_config.management_report_file) # Use the generate_profit_report function
+            reporting_logic.generate_profit_report(super_config.bought_file, super_config.sold_file)
+            reporting_logic.update_expired_items_in_management_report()
+
         else:
             print("Invalid report type. Please choose 'inventory', 'revenue', 'profit', or 'expired'.")
+
+    # Add the call to update_management_report here
+    reporting_logic.update_management_report(
+        super_config.sold_file,
+        super_config.bought_file,
+        super_config.management_report_file
+    )
 
 if __name__ == "__main__":
     functions.check_before_reset_date()

@@ -1,1 +1,3 @@
-sell_name,buy_amount,buy_price,sell_amount,sell_price,revenue
+buy_name,total_revenue,total_sell_amount,buy_price,sell_price,profit,total_buy_amount,total_expired_amount
+Lays Paprika Chips 300g,0.0,0.0,0.9,0.0,0.0,10,1
+Watermeloen 1kg,14.0,8.0,5.45,7.0,12.399999999999999,20,2

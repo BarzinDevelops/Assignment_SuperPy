@@ -1,2 +1,2 @@
-sell_id,sell_date,sell_name,sell_amount,sell_price
-1,2023-07-16,Watermeloen 1kg,4,7.0
+sell_id,sell_date,buy_name,sell_amount,sell_price
+1,2023-07-15,Watermeloen 1kg,4,7.0

@@ -9,7 +9,34 @@ import functions
 from config import SuperConfig
 
 
-# =========================================
+# ===============================================================================
+# ===============================================================================
+# ===============================================================================
+def calculate_revenue_profit(name, amount, price, product_inventory):
+    # Calculate revenue and profit
+    revenue = amount * price
+    profit = revenue - (amount * product_inventory['buy_price'].values[0])
+
+    # Update the management report for the sale
+    management_report_col_names = ['buy_name', 'buy_amount', 'buy_price', 'sell_amount', 'sell_price', 'is_expired', 'revenue', 'profit']
+    management_report_data = functions.read_or_create_csv_file(super_config.management_report_file, management_report_col_names)
+    
+    new_sale_entry = pd.DataFrame({
+        'buy_name': [name],
+        'buy_amount': [product_inventory['buy_amount'].values[0]],
+        'buy_price': [product_inventory['buy_price'].values[0]],
+        'sell_amount': [amount],
+        'sell_price': [price],
+        'is_expired': [False if pd.isna(product_inventory['expire_date'].values[0]) else True],
+        'revenue': [revenue],
+        'profit': [profit]
+    })
+
+    management_report_data = pd.concat([management_report_data, new_sale_entry], ignore_index=True)
+    management_report_data.to_csv(super_config.management_report_file, index=False)
+
+    return revenue, profit
+
 
 
 #==========================generating reports ======================================
@@ -95,15 +122,15 @@ def generate_revenue_report(inventory_file, bought_file, sold_file, management_r
     bought_data = pd.read_csv(bought_file)
 
     # Calculate revenue for products that are not expired
-    revenue_data = sold_data[~sold_data['sell_name'].isin(inventory_data[inventory_data['is_expired']]['buy_name'])]
+    revenue_data = sold_data[~sold_data['buy_name'].isin(inventory_data[inventory_data['is_expired']]['buy_name'])]
     revenue_data['revenue'] = revenue_data['sell_amount'] * revenue_data['sell_price']
 
     # Merge with bought data
-    merged_data = revenue_data.merge(bought_data, left_on='sell_name', right_on='buy_name', suffixes=('_sold', '_bought'))
+    merged_data = revenue_data.merge(bought_data, left_on='buy_name', right_on='buy_name', suffixes=('_sold', '_bought'))
 
     # Update inventory based on items sold
     for _, row in merged_data.iterrows():
-        product_name = row['sell_name']
+        product_name = row['buy_name']
         sold_amount = row['sell_amount']
         inventory_data.loc[inventory_data['buy_name'] == product_name, 'buy_amount'] -= sold_amount
 
@@ -111,7 +138,7 @@ def generate_revenue_report(inventory_file, bought_file, sold_file, management_r
     merged_data['buy_amount'] = merged_data[['buy_amount', 'sell_amount']].max(axis=1)
 
     # Select relevant columns for the report
-    report_data = merged_data.groupby('sell_name').agg({
+    report_data = merged_data.groupby('buy_name').agg({
         'buy_amount': 'sum',
         'buy_price': 'mean',
         'sell_amount': 'sum',
@@ -137,7 +164,7 @@ def generate_revenue_report(inventory_file, bought_file, sold_file, management_r
     for _, row in report_data.iterrows():
         revenue_per_item =  row['sell_price'] -  row['buy_price'] if row['sell_amount'] > 0 else 0
         table.add_row(
-            row['sell_name'],
+            row['buy_name'],
             f"{int(row['buy_amount'])}",
             f"{row['buy_price']:.2f}",
             f"{int(row['sell_amount'])}",
@@ -152,99 +179,95 @@ def generate_revenue_report(inventory_file, bought_file, sold_file, management_r
 
 
 #-------------------------------------------------------------------------------------
-def generate_profit_report(inventory_file, bought_file, sold_file, management_report_file):
-    # Read data from files
-    sold_data = pd.read_csv(sold_file)
-    bought_data = pd.read_csv(bought_file)
+def generate_profit_report(bought_data_file, sold_data_file):
+    # Load bought data
+    bought_data = pd.read_csv(bought_data_file)
 
-    # Exclude expired products from both sold and bought data
-    today = pd.to_datetime('today').strftime('%Y-%m-%d')
-    sold_data = sold_data[sold_data['sell_date'] <= today]
-    bought_data = bought_data[bought_data['expire_date'] >= today]
+    # Load sold data
+    sold_data = pd.read_csv(sold_data_file) 
+    
+    merged_data = pd.merge(sold_data, bought_data, on='buy_name', how='left', suffixes=('_sell', '_buy'))
+    
+    # Explicitly create the buy_amount columns
+    merged_data['buy_amount_buy'] = merged_data['buy_amount'].where(merged_data['buy_date'] <= merged_data['sell_date'], 0)
+    merged_data['buy_amount_sell'] = merged_data['buy_amount'].where(merged_data['buy_date'] > merged_data['sell_date'], 0)
+    
+    # Calculate profit for each row
+    merged_data['profit'] = merged_data.apply(lambda row: calculate_profit(row), axis=1)
 
-    # Set index on bought_data for easier alignment
-    bought_data_indexed = bought_data.set_index('buy_name')
+    # Print merged data for debugging
+    # print("Merged Data:")
+    # print(merged_data)
 
-    # Calculate revenue
-    sold_data['revenue'] = sold_data['sell_amount'] * sold_data['sell_price']
+    # Further debugging: Print column names in merged data
+    # print("Column Names in Merged Data:")
+    # print(merged_data.columns)
 
-    # Merge sold_data with bought_data_indexed to align the data
-    merged_data = sold_data.merge(bought_data_indexed, left_on='sell_name', right_index=True)
+    # Update the aggregation logic based on the merged data
+    report_data = merged_data.groupby(['buy_name', 'buy_id', 'buy_price']).agg({
+        'sell_amount': 'first',
+        'sell_price': 'first',
+        'buy_amount_sell': 'sum',
+        'buy_amount_buy': 'sum',
+        'profit': 'sum',
+        'expire_date': 'max'
+    })
 
-    # Calculate total revenue and total cost for each product
-    grouped_data = merged_data.groupby('sell_name').agg({'revenue': 'sum', 'sell_amount': 'sum', 'buy_price': 'first'})
+    # Reset index, dropping the existing 'buy_price' column
+    report_data = report_data.reset_index()
+    
+    
+    # Print the report data for debugging
+    print("Report Data:")
+    print(report_data)
+# -------------------------------------------------------------------------------------
 
-    # Calculate profit
-    grouped_data['profit'] = grouped_data['revenue'] - (grouped_data['sell_amount'] * grouped_data['buy_price'])
-
-    # Format the report similar to the revenue report
-    report_data = grouped_data[['revenue', 'sell_amount', 'buy_price', 'profit']]
-    report_data = report_data.rename(columns={'revenue': 'Total Revenue', 'sell_amount': 'Total Sell Amount', 'buy_price': 'Buy Price', 'profit': 'Profit'})
-
-    # Display the formatted report data using rich
-    console = Console()
-    table = Table(show_header=True, header_style="bold magenta")
-    table.add_column("Product", style="dim", width=30)
-    table.add_column("Total Revenue", justify="right")
-    table.add_column("Total Sell Amount", justify="right")
-    table.add_column("Buy Price", justify="right")
-    table.add_column("Profit", justify="right")
-
-    for product, row in report_data.iterrows():
-        table.add_row(
-            product,
-            f"{row['Total Revenue']:.2f}",
-            f"{row['Total Sell Amount']:.2f}",
-            f"{row['Buy Price']:.2f}",
-            f"{row['Profit']:.2f}",
-        )
-
-    console.print("\nDebugging: Formatted Report Data")
-    console.print(table)
-
-    # Save the formatted report data to a new CSV file
-    report_data.to_csv(management_report_file, index_label='Product')
+def calculate_profit(row):
+    sell_amount = row['sell_amount']
+    sell_price = row['sell_price']
+    buy_price = row['buy_price']
+    
+    buy_amount_sell = row.get('buy_amount_sell', 0)
+    buy_amount_buy = row.get('buy_amount_buy', 0)
+    
+    buy_amount = max(buy_amount_sell, buy_amount_buy)
+    
+    return sell_price - buy_price * buy_amount if sell_amount > 0 else 0
 
 # -------------------------------------------------------------------------------------
 
-
-
-
-
-
-
-
 def update_management_report(inventory_file, sold_file, management_report_file):
-    # Read inventory data
+    # Load data
     inventory_data = pd.read_csv(inventory_file)
-
-    # Read sold data
     sold_data = pd.read_csv(sold_file)
 
-    # Group sold data by product and sum the sell amounts and sell prices
-    sold_summary = sold_data.groupby('sell_name').agg({
-        'sell_amount': 'sum',
-        'sell_price': 'sum'
-    }).reset_index()
+    # Merge data
+    merged_data = pd.merge(sold_data, inventory_data, how='left', left_on='buy_name', right_on='buy_name')
 
-    # Merge with inventory data to get buy price and is_expired
-    merged_data = pd.merge(inventory_data, sold_summary, left_on='buy_name', right_on='sell_name', how='left')
-    merged_data['sell_amount'].fillna(0, inplace=True)
-    merged_data['sell_price'].fillna(0, inplace=True)
+    # Fill NaN values with 0
+    merged_data.fillna(0, inplace=True)
 
-    # Calculate revenue and profit
-    merged_data['revenue'] = merged_data['sell_amount'] * merged_data['sell_price']
-    merged_data['profit'] = merged_data['revenue'] - (merged_data['buy_amount'] * merged_data['buy_price'])
+    # Calculate profit
+    merged_data['profit'] = merged_data['sell_amount'] * (merged_data['sell_price'] - merged_data['buy_price'])
 
-    # Update is_expired based on expire_date and current date
-    current_date = pd.to_datetime(functions.get_current_date())
-    merged_data['is_expired'] = pd.to_datetime(merged_data['expire_date']) < current_date
+    # Group by product and calculate totals
+    grouped_data = merged_data.groupby('buy_name').agg(
+        total_revenue=('sell_price', 'sum'),
+        total_sell_amount=('sell_amount', 'sum'),
+        buy_price=('buy_price', 'mean'),
+        sell_price=('sell_price', 'mean'),
+        profit=('profit', 'sum'),
+        total_buy_amount=('buy_amount', 'sum'),
+        total_expired_amount=('expire_date', lambda x: (x != '0').sum())
+    ).reset_index()
 
-    # Save the updated report
-    merged_data.to_csv(management_report_file, index=False)
+    # Update the management report file
+    grouped_data.to_csv(management_report_file, index=False)
+
     print("Management report updated.")
 
 
+# ----------------------------------------------------------------------------------
 
 def update_expired_items_in_management_report():
     # Load the inventory and sold data
