@@ -70,6 +70,7 @@ def main():
 
         if functions.validate_expire_date_before_buying(expire_date):
             functions.buy_product(product_name, amount, price, expire_date)
+
         else:
             print(f"Error: This Product: '{product_name}' is already expired and cannot be bought!")
 
@@ -78,37 +79,26 @@ def main():
         amount = args.sell_amount
         price = args.sell_price
         functions.sell_action(product_name, amount, price)
-        reporting_logic.update_management_report(super_config.inventory_file, super_config.sold_file,
-                                                 super_config.management_report_file)
-        # Add the call to update_expired_items_in_management_report here
-        # reporting_logic.update_expired_items_in_management_report()
+
 
     elif args.action == 'report':
         functions.update_inventory_expire_status()
 
         if args.report_type == 'expired':
-            functions.check_expired_products()  # Use the check_expired_products function
+            functions.check_expired_products() 
         elif args.report_type == 'inventory':
-            reporting_logic.generate_inventory_report()  # Use the generate_inventory_report function
+            reporting_logic.generate_inventory_report() 
         elif args.report_type == 'revenue':
-            
-            reporting_logic.generate_revenue_report(super_config.inventory_file, super_config.bought_file,
-                                                    super_config.sold_file, super_config.management_report_file)
-            reporting_logic.update_expired_items_in_management_report()
-            # Use the generate_revenue_report function
+            reporting_logic.generate_revenue_report(super_config.management_report_file)
+
         elif args.report_type == 'profit':
-            reporting_logic.generate_profit_report(super_config.bought_file, super_config.sold_file)
-            reporting_logic.update_expired_items_in_management_report()
+            reporting_logic.generate_profit_report(super_config.management_report_file)
+
 
         else:
-            print("Invalid report type. Please choose 'inventory', 'revenue', 'profit', or 'expired'.")
-
-    # Add the call to update_management_report here
-    reporting_logic.update_management_report(
-        super_config.sold_file,
-        super_config.bought_file,
-        super_config.management_report_file
-    )
+            print("Invalid report type. Please choose 'inventory', 'revenue', 'profit', or 'expired.'")
+            
+    reporting_logic.update_management_report()
 
 if __name__ == "__main__":
     functions.check_before_reset_date()

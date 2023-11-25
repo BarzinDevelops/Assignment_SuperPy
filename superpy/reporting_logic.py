@@ -4,6 +4,7 @@ from rich.console import Console
 from rich.style import Style
 from rich import box
 import pandas as pd
+import numpy as np
 # Import local modules:
 import functions
 from config import SuperConfig
@@ -110,161 +111,126 @@ def generate_inventory_report():
 
 
 # -------------------------------------------------------------------------------------
-
-
-
-
-
-def generate_revenue_report(inventory_file, bought_file, sold_file, management_report_file):
+def generate_revenue_report(management_report_file):
     # Load data from CSV files
-    sold_data = pd.read_csv(sold_file)
-    inventory_data = pd.read_csv(inventory_file)
-    bought_data = pd.read_csv(bought_file)
-
-    # Calculate revenue for products that are not expired
-    revenue_data = sold_data[~sold_data['buy_name'].isin(inventory_data[inventory_data['is_expired']]['buy_name'])]
-    revenue_data['revenue'] = revenue_data['sell_amount'] * revenue_data['sell_price']
-
-    # Merge with bought data
-    merged_data = revenue_data.merge(bought_data, left_on='buy_name', right_on='buy_name', suffixes=('_sold', '_bought'))
-
-    # Update inventory based on items sold
-    for _, row in merged_data.iterrows():
-        product_name = row['buy_name']
-        sold_amount = row['sell_amount']
-        inventory_data.loc[inventory_data['buy_name'] == product_name, 'buy_amount'] -= sold_amount
-
-    # Ensure total bought is not less than total sold
-    merged_data['buy_amount'] = merged_data[['buy_amount', 'sell_amount']].max(axis=1)
-
-    # Select relevant columns for the report
-    report_data = merged_data.groupby('buy_name').agg({
-        'buy_amount': 'sum',
-        'buy_price': 'mean',
-        'sell_amount': 'sum',
-        'sell_price': 'mean',
-        'revenue': 'sum'
-    }).reset_index()
-
-    # Append the new report data to the management report file
-    report_data.to_csv(management_report_file, mode='w', header=True, index=False)  # Use mode='w' to overwrite the file
-    print("Management report updated successfully.")
-
-    # Print the report using a Rich table
-    console = Console()
+    mangement_data = pd.read_csv(management_report_file)
+    
     table = Table(title="Revenue Report", style='blue', box=box.ROUNDED)
-    table.add_column("[bold purple]Product Name[/bold purple]", justify="center", style="bold", no_wrap=True)
-    table.add_column("Total Buy Amount", justify="center", style="bold", no_wrap=True)
+    table.add_column("[bold purple]Product Name[/bold purple]", justify="left", style="bold", no_wrap=True)
+    # table.add_column("Buy Amount", justify="center", style="bold", no_wrap=True)
+    # table.add_column("Buy Price", justify="center", style="bold", no_wrap=True)
+    table.add_column("Sold Amount", justify="center", style="bold", no_wrap=True)
+    table.add_column("Sold Price", justify="center", style="bold", no_wrap=True)
+    # table.add_column("Total Purchasing Costs", justify="center", style="bold", no_wrap=True)
+    table.add_column("Revenue", justify="center", style="bold", no_wrap=True)
+    # table.add_column("Expired Amount", justify="center", style="bold", no_wrap=True)
+    # table.add_column("[bold]Profit/Loss[/bold]", justify="center", style="bold", no_wrap=True)
+    
+    for _, row in mangement_data.iterrows():
+        
+        revenue =  row['sell_price'] * row['sell_amount']
+        total_purchase_costs = row['buy_amount_buy'] * row['buy_price_buy']
+        profit = revenue - total_purchase_costs  if (row['sell_amount'] > 0) and (row['expired_amount'] ) else 0
+                
+        if row['expired_amount'] <= 0:
+            revenue =  row['sell_price'] * row['sell_amount']
+            total_purchase_costs = row['buy_amount_buy'] * row['buy_price_buy']
+            profit = revenue - total_purchase_costs if (row['sell_amount'] > 0) else 0
+            profit_cell_color = 'blue'        
+        else:
+            expired_loss =  row['expired_amount'] * row['buy_price_buy']
+            profit = profit - expired_loss
+            profit_cell_color = 'red' if profit < 0 else 'green'
+        
+            
+        
+        
+        table.add_row(
+            row['buy_name_buy'],
+            # f"{int(row['buy_amount_buy'])}",
+            # f"{row['buy_price_buy']:.2f}",
+            f"{row['sell_amount']:.2f}",
+            f"{row['sell_price']:.2f}",
+            # f"{total_purchase_costs:.2f}",
+            f"{revenue:.2f}",
+            # f"{row['expired_amount']}",
+            # f"[{profit_cell_color}]{profit:.2f}"
+        )
+    console.print(table) 
+#-------------------------------------------------------------------------------------
+def generate_profit_report(management_report_file):
+    # Load data from CSV files
+    mangement_data = pd.read_csv(management_report_file)
+    
+    table = Table(title="Revenue Report", style='blue', box=box.ROUNDED)
+    table.add_column("[bold purple]Product Name[/bold purple]", justify="left", style="bold", no_wrap=True)
+    table.add_column("Buy Amount", justify="center", style="bold", no_wrap=True)
     table.add_column("Buy Price", justify="center", style="bold", no_wrap=True)
     table.add_column("Sold Amount", justify="center", style="bold", no_wrap=True)
     table.add_column("Sold Price", justify="center", style="bold", no_wrap=True)
-    table.add_column("Revenue Per Item", justify="center", style="bold", no_wrap=True)
-    table.add_column("Total Revenue", justify="center", style="bold", no_wrap=True)
-
-    for _, row in report_data.iterrows():
-        revenue_per_item =  row['sell_price'] -  row['buy_price'] if row['sell_amount'] > 0 else 0
+    table.add_column("Total Purchasing Costs", justify="center", style="bold", no_wrap=True)
+    table.add_column("Revenue", justify="center", style="bold", no_wrap=True)
+    table.add_column("Expired Amount", justify="center", style="bold", no_wrap=True)
+    table.add_column("[bold]Profit/Loss[/bold]", justify="center", style="bold", no_wrap=True)
+    
+    for _, row in mangement_data.iterrows():
+        
+        revenue =  row['sell_price'] * row['sell_amount']
+        total_purchase_costs = row['buy_amount_buy'] * row['buy_price_buy']
+        profit = revenue - total_purchase_costs  if (row['sell_amount'] > 0) and (row['expired_amount'] ) else 0
+                
+        if row['expired_amount'] <= 0:
+            revenue =  row['sell_price'] * row['sell_amount']
+            total_purchase_costs = row['buy_amount_buy'] * row['buy_price_buy']
+            profit = revenue - total_purchase_costs if (row['sell_amount'] > 0) else 0
+            profit_cell_color = 'blue'         
+        else:
+            expired_loss =  row['expired_amount'] * row['buy_price_buy']
+            profit = profit - expired_loss
+            profit_cell_color = 'red' if profit < 0 else 'green'
+               
+        
         table.add_row(
-            row['buy_name'],
-            f"{int(row['buy_amount'])}",
-            f"{row['buy_price']:.2f}",
-            f"{int(row['sell_amount'])}",
+            row['buy_name_buy'],
+            f"{int(row['buy_amount_buy'])}",
+            f"{row['buy_price_buy']:.2f}",
+            f"{row['sell_amount']:.2f}",
             f"{row['sell_price']:.2f}",
-            f"{revenue_per_item:.2f}",
-            f"{row['revenue']:.2f}"
+            f"{total_purchase_costs:.2f}",
+            f"{revenue:.2f}",
+            f"{row['expired_amount']}",
+            f"[{profit_cell_color}]{profit:.2f}"
         )
-
-    console.print(table)
-
-
-
-
-#-------------------------------------------------------------------------------------
-def generate_profit_report(bought_data_file, sold_data_file):
-    # Load bought data
-    bought_data = pd.read_csv(bought_data_file)
-
-    # Load sold data
-    sold_data = pd.read_csv(sold_data_file) 
-    
-    merged_data = pd.merge(sold_data, bought_data, on='buy_name', how='left', suffixes=('_sell', '_buy'))
-    
-    # Explicitly create the buy_amount columns
-    merged_data['buy_amount_buy'] = merged_data['buy_amount'].where(merged_data['buy_date'] <= merged_data['sell_date'], 0)
-    merged_data['buy_amount_sell'] = merged_data['buy_amount'].where(merged_data['buy_date'] > merged_data['sell_date'], 0)
-    
-    # Calculate profit for each row
-    merged_data['profit'] = merged_data.apply(lambda row: calculate_profit(row), axis=1)
-
-    # Print merged data for debugging
-    # print("Merged Data:")
-    # print(merged_data)
-
-    # Further debugging: Print column names in merged data
-    # print("Column Names in Merged Data:")
-    # print(merged_data.columns)
-
-    # Update the aggregation logic based on the merged data
-    report_data = merged_data.groupby(['buy_name', 'buy_id', 'buy_price']).agg({
-        'sell_amount': 'first',
-        'sell_price': 'first',
-        'buy_amount_sell': 'sum',
-        'buy_amount_buy': 'sum',
-        'profit': 'sum',
-        'expire_date': 'max'
-    })
-
-    # Reset index, dropping the existing 'buy_price' column
-    report_data = report_data.reset_index()
-    
-    
-    # Print the report data for debugging
-    print("Report Data:")
-    print(report_data)
-# -------------------------------------------------------------------------------------
-
-def calculate_profit(row):
-    sell_amount = row['sell_amount']
-    sell_price = row['sell_price']
-    buy_price = row['buy_price']
-    
-    buy_amount_sell = row.get('buy_amount_sell', 0)
-    buy_amount_buy = row.get('buy_amount_buy', 0)
-    
-    buy_amount = max(buy_amount_sell, buy_amount_buy)
-    
-    return sell_price - buy_price * buy_amount if sell_amount > 0 else 0
+    console.print(table) 
 
 # -------------------------------------------------------------------------------------
 
-def update_management_report(inventory_file, sold_file, management_report_file):
-    # Load data
-    inventory_data = pd.read_csv(inventory_file)
-    sold_data = pd.read_csv(sold_file)
+def update_management_report():
+    # Read data from the CSV files
+    bought_df = pd.read_csv(super_config.bought_file)
+    inventory_df = pd.read_csv(super_config.inventory_file)
+    sold_df = pd.read_csv(super_config.sold_file)
 
-    # Merge data
-    merged_data = pd.merge(sold_data, inventory_data, how='left', left_on='buy_name', right_on='buy_name')
+    # Merge 'bought_df' with 'inventory_df'
+    management_data = pd.merge(bought_df, inventory_df, on='buy_id', how='inner', suffixes=('_buy', '_inventory'))
 
-    # Fill NaN values with 0
-    merged_data.fillna(0, inplace=True)
+    # Merge the result with 'sold_df'
+    management_data = pd.merge(management_data, sold_df, left_on='buy_name_buy', right_on='buy_name', how='left', suffixes=('_buy', '_sold'))
 
-    # Calculate profit
-    merged_data['profit'] = merged_data['sell_amount'] * (merged_data['sell_price'] - merged_data['buy_price'])
+    # Calculate 'expired_amount' based on 'is_expired'
+    management_data['expired_amount'] = management_data.apply(
+        lambda row: row['buy_amount_inventory'] if row['is_expired'] else 0, axis=1
+    )
 
-    # Group by product and calculate totals
-    grouped_data = merged_data.groupby('buy_name').agg(
-        total_revenue=('sell_price', 'sum'),
-        total_sell_amount=('sell_amount', 'sum'),
-        buy_price=('buy_price', 'mean'),
-        sell_price=('sell_price', 'mean'),
-        profit=('profit', 'sum'),
-        total_buy_amount=('buy_amount', 'sum'),
-        total_expired_amount=('expire_date', lambda x: (x != '0').sum())
-    ).reset_index()
+    # Fill NaN values in 'sell_amount' and 'sell_price' with 0
+    management_data[['sell_amount', 'sell_price']] = management_data[['sell_amount', 'sell_price']].fillna(0)
 
-    # Update the management report file
-    grouped_data.to_csv(management_report_file, index=False)
+    # Select the desired columns
+    management_data = management_data[['buy_name_buy', 'buy_amount_buy', 'buy_price_buy', 'sell_amount', 'sell_price', 'expired_amount']]
 
-    print("Management report updated.")
+    # Save the result to 'management_report.csv'
+    management_data.to_csv(super_config.management_report_file, index=False)
+
 
 
 # ----------------------------------------------------------------------------------

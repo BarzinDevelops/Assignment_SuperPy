@@ -2,6 +2,10 @@
 # ------------------------------------------#
 from datetime import datetime as dt, timedelta, date
 import pandas as pd # using pandas to read from and write to files:
+from rich.table import Table
+from rich.console import Console
+from rich.style import Style
+from rich import box
 import os
 import reporting_logic
 from config import SuperConfig
@@ -124,6 +128,7 @@ def update_inventory(bought_file_data, amount_bought=0):
         # Save the updated data to 'inventory.csv'
         updated_data.to_csv(super_config.inventory_file, index=False, mode='w', header=True)
         
+        # reporting_logic.update_management_report()
         return updated_data  # Return the updated inventory_data
         # """
     except Exception as e:
@@ -307,25 +312,47 @@ def check_before_reset_date():
 # ---------------------------------------------------------------------#
 def check_expired_products():
     try:
-        inventory_col_names = ['id', 'buy_date', 'buy_name', 'buy_amount', 'buy_price', 'expire_date']
+        console = Console()
+
+        inventory_col_names = ['inventory_id', 'buy_id', 'buy_date', 'buy_name', 'buy_amount', 'buy_price', 'expire_date', 'is_expired']
         inventory_data = read_or_create_csv_file(super_config.inventory_file, inventory_col_names)
-        
-        # Convert 'expire_date' column to datetime64[ns] type
-        inventory_data['expire_date'] = pd.to_datetime(inventory_data['expire_date'])
-        # Convert current_date to datetime64[ns]
-        current_date = pd.to_datetime(get_current_date())  # Convert to datetime64[ns]
-        
+
+        # Convert 'expire_date' column to datetime64[ns] type and only keep the date part
+        inventory_data['expire_date'] = pd.to_datetime(inventory_data['expire_date']).dt.date
+        # Convert current_date to datetime64[ns] and only keep the date part
+        current_date = pd.to_datetime(get_current_date()).date()
+
         expired_product_inventory = inventory_data[inventory_data['expire_date'] < current_date]
 
-        if len(expired_product_inventory) > 0:
-            print(f"Expired Products:")
-            print(line)
-            print(expired_product_inventory.to_string(index=False))
+        if not expired_product_inventory.empty:
+            table = Table(title="Expired Products", style="green", box=box.ROUNDED)
+            table.add_column("[bold green]ID[/bold green]", justify="center", style="bold", no_wrap=True)
+            table.add_column("[bold green]Buy Date[/bold green]", justify="center", style="bold", no_wrap=True)
+            table.add_column("[bold green]Product Name[/bold green]", justify="left", style="bold", no_wrap=True)
+            table.add_column("[bold green]Buy Amount[/bold green]", justify="center", style="bold", no_wrap=True)
+            table.add_column("[bold green]Buy Price[/bold green]", justify="center", style="bold", no_wrap=True)
+            table.add_column("[bold green]Expire Date[/bold green]", justify="center", style="bold", no_wrap=True)
+
+            content_color = 'white on navy_blue'
+            amount_color = 'blue_violet'
+            
+            for _, row in expired_product_inventory.iterrows():
+                table.add_row(
+                    f"[{content_color}]{str(row['inventory_id'])}",
+                    f"[{content_color}]{str(row['buy_date'])}",
+                    f"[{content_color}]{row['buy_name']}",
+                    f"[{amount_color}]{str(row['buy_amount'])}",
+                    f"[{content_color}]{row['buy_price']:.2f}",
+                    f"[{content_color}]{str(row['expire_date'])}"
+                )
+
+            console.print(table)
         else:
             print("No expired products found.")
     except Exception as e:
         # Handle the error
         print("An error occurred while checking for expired products ---->", e)
+
 # ---------------------------------------------------------------------#
 def sell_action(name, amount, price):
     # Update inventory expiration status
