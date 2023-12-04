@@ -1,19 +1,27 @@
-# All the IMPORTS:
-# ------------------------------------------#
+# 
+# ---------------All the IMPORTS:---------------#
 from datetime import datetime as dt, timedelta, date
 import pandas as pd # using pandas to read from and write to files:
 from rich.table import Table
 from rich.console import Console
-from rich.style import Style
 from rich import box
+from reportlab.pdfgen.canvas import Canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.colors import blue, green, red
 import os
-import reporting_logic
+# import reporting_logic
 from config import SuperConfig
+# -----------------------------------------------#
 
+# instantiate an object of SuperConfig class where the pathes to csv files are defined
 super_config = SuperConfig()
+
+# Create a Rich Console
+console = Console()
 # ---------------------------------------------------------------------#
-line = '-' * 20  # for underlining some columns
-# ---------------------------------------------------------------------#
+def generate_pdf_report(pdf_file_name_and_path):
+    pass
+        
 def read_or_create_csv_file(filename, col_names):
     try:
         if os.path.exists(filename):
@@ -312,8 +320,6 @@ def check_before_reset_date():
 # ---------------------------------------------------------------------#
 def check_expired_products():
     try:
-        console = Console()
-
         inventory_col_names = ['inventory_id', 'buy_id', 'buy_date', 'buy_name', 'buy_amount', 'buy_price', 'expire_date', 'is_expired']
         inventory_data = read_or_create_csv_file(super_config.inventory_file, inventory_col_names)
 

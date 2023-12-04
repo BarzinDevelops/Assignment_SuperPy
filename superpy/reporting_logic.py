@@ -117,14 +117,9 @@ def generate_revenue_report(management_report_file):
     
     table = Table(title="Revenue Report", style='blue', box=box.ROUNDED)
     table.add_column("[bold purple]Product Name[/bold purple]", justify="left", style="bold", no_wrap=True)
-    # table.add_column("Buy Amount", justify="center", style="bold", no_wrap=True)
-    # table.add_column("Buy Price", justify="center", style="bold", no_wrap=True)
     table.add_column("Sold Amount", justify="center", style="bold", no_wrap=True)
     table.add_column("Sold Price", justify="center", style="bold", no_wrap=True)
-    # table.add_column("Total Purchasing Costs", justify="center", style="bold", no_wrap=True)
     table.add_column("Revenue", justify="center", style="bold", no_wrap=True)
-    # table.add_column("Expired Amount", justify="center", style="bold", no_wrap=True)
-    # table.add_column("[bold]Profit/Loss[/bold]", justify="center", style="bold", no_wrap=True)
     
     for _, row in mangement_data.iterrows():
         
@@ -136,31 +131,60 @@ def generate_revenue_report(management_report_file):
             revenue =  row['sell_price'] * row['sell_amount']
             total_purchase_costs = row['buy_amount_buy'] * row['buy_price_buy']
             profit = revenue - total_purchase_costs if (row['sell_amount'] > 0) else 0
-            profit_cell_color = 'blue'        
+        
         else:
             expired_loss =  row['expired_amount'] * row['buy_price_buy']
             profit = profit - expired_loss
-            profit_cell_color = 'red' if profit < 0 else 'green'
-        
-            
-        
-        
+
         table.add_row(
             row['buy_name_buy'],
-            # f"{int(row['buy_amount_buy'])}",
-            # f"{row['buy_price_buy']:.2f}",
             f"{row['sell_amount']:.2f}",
             f"{row['sell_price']:.2f}",
-            # f"{total_purchase_costs:.2f}",
             f"{revenue:.2f}",
-            # f"{row['expired_amount']}",
-            # f"[{profit_cell_color}]{profit:.2f}"
         )
     console.print(table) 
 #-------------------------------------------------------------------------------------
 def generate_profit_report(management_report_file):
     # Load data from CSV files
     mangement_data = pd.read_csv(management_report_file)
+    
+    
+    # testing how to create pdf files for reporting:
+    from reportlab.pdfgen.canvas import Canvas
+    from reportlab.lib.pagesizes import A4
+    from reportlab.platypus import Table as RLTable, TableStyle
+    from reportlab.lib import colors
+    
+    pdf_filename = 'my_profit_report'
+    pdf_file_name_and_path = f"outputs/PDF_reports/{pdf_filename}.pdf"
+    pdf_canvas = Canvas(pdf_file_name_and_path, pagesize=A4)
+    
+    table_data = ["Product Name", "Buy Amount", "Buy Price", "Sold Amount", "Sold Price", "Total Purchasing Costs", "Revenue", "Expired Amount", "Profit/Loss"]
+    
+     # Create a ReportLab table
+    pdf_table = RLTable(table_data)
+
+    # Apply styles to the table
+    style = TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.blue),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+    ])
+
+    pdf_table.setStyle(style)
+
+    # Draw the table on the ReportLab canvas
+    pdf_table.wrapOn(pdf_canvas, 0, 0)
+    pdf_table.drawOn(pdf_canvas, 10, 600)
+
+    # Save the canvas to the PDF file
+    pdf_canvas.save()
+
+    print(f"PDF report saved to: {pdf_file_name_and_path}")
+   
     
     table = Table(title="Revenue Report", style='blue', box=box.ROUNDED)
     table.add_column("[bold purple]Product Name[/bold purple]", justify="left", style="bold", no_wrap=True)
@@ -172,7 +196,7 @@ def generate_profit_report(management_report_file):
     table.add_column("Revenue", justify="center", style="bold", no_wrap=True)
     table.add_column("Expired Amount", justify="center", style="bold", no_wrap=True)
     table.add_column("[bold]Profit/Loss[/bold]", justify="center", style="bold", no_wrap=True)
-    
+
     for _, row in mangement_data.iterrows():
         
         revenue =  row['sell_price'] * row['sell_amount']
@@ -202,7 +226,10 @@ def generate_profit_report(management_report_file):
             f"[{profit_cell_color}]{profit:.2f}"
         )
     console.print(table) 
-
+    
+   
+    
+    # functions.generate_pdf_report(pdf_file_name_and_path)
 # -------------------------------------------------------------------------------------
 
 def update_management_report():

@@ -7,7 +7,6 @@ class SuperConfig:
         self.sold_file = os.path.join(self.outputs_dir, 'sold.csv')
         self.inventory_file = os.path.join(self.outputs_dir, 'inventory.csv')
         self.management_report_file = os.path.join(self.outputs_dir, 'management_report.csv')
-
         
 
 # Instantiate the config if the script is run directly

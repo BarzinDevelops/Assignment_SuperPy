@@ -93,12 +93,14 @@ def main():
 
         elif args.report_type == 'profit':
             reporting_logic.generate_profit_report(super_config.management_report_file)
-
-
+    
         else:
             print("Invalid report type. Please choose 'inventory', 'revenue', 'profit', or 'expired.'")
             
     reporting_logic.update_management_report()
+    
+    
+
 
 if __name__ == "__main__":
     functions.check_before_reset_date()
