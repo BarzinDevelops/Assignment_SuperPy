@@ -1,16 +1,26 @@
 # Import third party modules
-from rich.table import Table
+from rich.table import Table as rTable
 from rich.console import Console
 from rich.style import Style
 from rich import box
 import pandas as pd
 import numpy as np
+
+# Needed modules and functions for creating pdf files for reporting
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Frame
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.pagesizes import letter, inch
+
 # Import local modules:
 import functions
 from config import SuperConfig
 
-
 # ===============================================================================
+console = Console()
+# This function is for investigating data in the .csv files to see if there are any data missing:
+super_config = SuperConfig()
 # ===============================================================================
 # ===============================================================================
 def calculate_revenue_profit(name, amount, price, product_inventory):
@@ -38,13 +48,7 @@ def calculate_revenue_profit(name, amount, price, product_inventory):
 
     return revenue, profit
 
-
-
 #==========================generating reports ======================================
-console = Console()
-# This function is for investigating data in the .csv files to see if there are any data missing:
-super_config = SuperConfig()
-
 def inspection_code():
     # INSPECTION CODE -----------------------------
     print(f"-------------START INSPECTION CODE OUTPUT-----------------------")
@@ -81,7 +85,7 @@ def generate_inventory_report():
     try:
         inventory_col_names = ['buy_name', 'buy_amount', 'buy_price', 'expire_date', 'is_expired']
         inventory_data = functions.read_or_create_csv_file(super_config.inventory_file, inventory_col_names)      
-        table = Table(title="Inventory Report", style='white', box=box.ROUNDED)
+        table = rTable(title="Inventory Report", style='white', box=box.ROUNDED)
         table.add_column("[bold purple]Product Name[/bold purple]")
         table.add_column("[bold dodger_blue3]Amount[/bold dodger_blue3]")
         table.add_column("[bold dark_green]Price[/bold dark_green]")
@@ -115,7 +119,7 @@ def generate_revenue_report(management_report_file):
     # Load data from CSV files
     mangement_data = pd.read_csv(management_report_file)
     
-    table = Table(title="Revenue Report", style='blue', box=box.ROUNDED)
+    table = rTable(title="Revenue Report", style='blue', box=box.ROUNDED)
     table.add_column("[bold purple]Product Name[/bold purple]", justify="left", style="bold", no_wrap=True)
     table.add_column("Sold Amount", justify="center", style="bold", no_wrap=True)
     table.add_column("Sold Price", justify="center", style="bold", no_wrap=True)
@@ -146,47 +150,9 @@ def generate_revenue_report(management_report_file):
 #-------------------------------------------------------------------------------------
 def generate_profit_report(management_report_file):
     # Load data from CSV files
-    mangement_data = pd.read_csv(management_report_file)
+    mangement_data = pd.read_csv(management_report_file)   
     
-    
-    # testing how to create pdf files for reporting:
-    from reportlab.pdfgen.canvas import Canvas
-    from reportlab.lib.pagesizes import A4
-    from reportlab.platypus import Table as RLTable, TableStyle
-    from reportlab.lib import colors
-    
-    pdf_filename = 'my_profit_report'
-    pdf_file_name_and_path = f"outputs/PDF_reports/{pdf_filename}.pdf"
-    pdf_canvas = Canvas(pdf_file_name_and_path, pagesize=A4)
-    
-    table_data = ["Product Name", "Buy Amount", "Buy Price", "Sold Amount", "Sold Price", "Total Purchasing Costs", "Revenue", "Expired Amount", "Profit/Loss"]
-    
-     # Create a ReportLab table
-    pdf_table = RLTable(table_data)
-
-    # Apply styles to the table
-    style = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.blue),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-    ])
-
-    pdf_table.setStyle(style)
-
-    # Draw the table on the ReportLab canvas
-    pdf_table.wrapOn(pdf_canvas, 0, 0)
-    pdf_table.drawOn(pdf_canvas, 10, 600)
-
-    # Save the canvas to the PDF file
-    pdf_canvas.save()
-
-    print(f"PDF report saved to: {pdf_file_name_and_path}")
-   
-    
-    table = Table(title="Revenue Report", style='blue', box=box.ROUNDED)
+    table = rTable(title="Profit Report", style='blue', box=box.ROUNDED)
     table.add_column("[bold purple]Product Name[/bold purple]", justify="left", style="bold", no_wrap=True)
     table.add_column("Buy Amount", justify="center", style="bold", no_wrap=True)
     table.add_column("Buy Price", justify="center", style="bold", no_wrap=True)
@@ -199,15 +165,22 @@ def generate_profit_report(management_report_file):
 
     for _, row in mangement_data.iterrows():
         
-        revenue =  row['sell_price'] * row['sell_amount']
-        total_purchase_costs = row['buy_amount_buy'] * row['buy_price_buy']
-        profit = revenue - total_purchase_costs  if (row['sell_amount'] > 0) and (row['expired_amount'] ) else 0
+        # revenue =  row['sell_price'] * row['sell_amount']
+        # total_purchase_costs = row['buy_amount_buy'] * row['buy_price_buy']
+        # profit = revenue - total_purchase_costs  if (row['sell_amount'] > 0) and (row['expired_amount'] ) else 0
                 
-        if row['expired_amount'] <= 0:
+        if row['expired_amount'] == 0:
+            
             revenue =  row['sell_price'] * row['sell_amount']
+            print(f"{row['buy_name_buy']} -> buy amount: {row['buy_amount_buy']}")
+            print(f"{row['buy_name_buy']} -> revenu: {revenue}")
             total_purchase_costs = row['buy_amount_buy'] * row['buy_price_buy']
             profit = revenue - total_purchase_costs if (row['sell_amount'] > 0) else 0
-            profit_cell_color = 'blue'         
+                     
+            if profit == 0:
+                profit_cell_color = 'blue'
+            else:
+                 profit_cell_color = 'red' if profit < 0 else 'green'
         else:
             expired_loss =  row['expired_amount'] * row['buy_price_buy']
             profit = profit - expired_loss
@@ -226,10 +199,109 @@ def generate_profit_report(management_report_file):
             f"[{profit_cell_color}]{profit:.2f}"
         )
     console.print(table) 
+    generate_pdf_report(mangement_data, 'profit_report')
     
-   
+    # ---------------------------------------------------------------------#
+def generate_pdf_report(data, report_name):
+    new_data = [["Product Name", "Buy Amount", "Buy Price", "Total Buy Costs", "Sell Amount", "Sell Price", "Revenue", "Expired Amount", "Profit"]]
     
-    # functions.generate_pdf_report(pdf_file_name_and_path)
+    for _, row in data.iterrows():
+        revenue = row['sell_price'] * row['sell_amount']
+        total_purchase_costs = row['buy_amount_buy'] * row['buy_price_buy']
+        profit = revenue - total_purchase_costs if (row['sell_amount'] > 0) and (row['expired_amount']) else 0
+        
+        if row['expired_amount'] == 0:
+            revenue = row['sell_price'] * row['sell_amount']
+            total_purchase_costs = row['buy_amount_buy'] * row['buy_price_buy']
+            profit = revenue - total_purchase_costs if (row['sell_amount'] > 0) else 0
+        else:
+            expired_loss = row['expired_amount'] * row['buy_price_buy']
+            profit = profit - expired_loss
+        
+        new_data.append([
+            row['buy_name_buy'],
+            f"{int(row['buy_amount_buy'])}",
+            f"{row['buy_price_buy']:.2f}",
+            f"{total_purchase_costs:.2f}",
+            f"{row['sell_amount']:.2f}",
+            f"{row['sell_price']:.2f}",
+            f"{revenue:.2f}",
+            f"{row['expired_amount']}",
+            f"{profit:.2f}"
+        ])
+
+    # Convert the list to a DataFrame
+    new_data_df = pd.DataFrame(new_data[1:], columns=new_data[0])
+
+    
+    # Set up PDF document
+    extension = '.pdf'
+    file_path = f"outputs/PDF_reports/{report_name}{extension}"
+
+    # Create the SimpleDocTemplate with the frame
+    doc = SimpleDocTemplate(file_path, pagesize=landscape(A4))
+
+    # Create a list to hold the content of the PDF
+    content = []
+    styles = getSampleStyleSheet()
+    
+    # Add additional text
+    text_to_write = "This is my report of all the bought and sold products. Also, it shows how much revenue each product has made and if any of it was expired. Based on those info, it then calculates the total profit of that product."
+    
+    text_to_write_style = styles['Normal']
+    # Modify properties
+    text_to_write_style.fontName = 'Helvetica'
+    text_to_write_style.fontSize = 14
+    text_to_write_style.leading = 14
+    text_to_write_style.spaceBefore = 20
+    text_to_write_style.spaceAfter = 15
+    text_to_write_style.leftIndent = 20
+    text_to_write_style.rightIndent = 20
+    text_to_write_style.firstLineIndent = 0
+    text_to_write_style.textColor = colors.navy
+    text_to_write_style.alignment = 0  # 0 for left, 1 for center, 2 for right, 3 for justify
+    
+    
+    # Add a title with a different color
+    title_style = ParagraphStyle(
+        'Title',
+        parent=getSampleStyleSheet()['Title'],
+        textColor=colors.blueviolet
+    )
+    title = Paragraph("Management Report", title_style)
+    content.append(title)
+
+    # Add the modified text to the content
+    content.append(Paragraph(text_to_write, text_to_write_style))
+
+    # Add space after the text
+    # content.append(Spacer(100, 50))  # Adjust the value as needed for the desired space
+
+    
+    
+    # Create a ReportLab table
+    pdf_table = Table([list(new_data_df.columns)] + new_data_df.values.tolist())
+
+    # Apply styles to the table
+    style = TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.navy),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 5),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.lightgrey),
+    ])
+
+    pdf_table.setStyle(style)
+
+    # Add the table to the content
+    content.append(pdf_table)
+
+    # Build the PDF document
+    doc.build(content)
+
+ 
 # -------------------------------------------------------------------------------------
 
 def update_management_report():

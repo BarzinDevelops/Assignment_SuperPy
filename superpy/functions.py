@@ -1,13 +1,9 @@
-# 
 # ---------------All the IMPORTS:---------------#
 from datetime import datetime as dt, timedelta, date
 import pandas as pd # using pandas to read from and write to files:
 from rich.table import Table
 from rich.console import Console
 from rich import box
-from reportlab.pdfgen.canvas import Canvas
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.colors import blue, green, red
 import os
 # import reporting_logic
 from config import SuperConfig
@@ -19,8 +15,6 @@ super_config = SuperConfig()
 # Create a Rich Console
 console = Console()
 # ---------------------------------------------------------------------#
-def generate_pdf_report(pdf_file_name_and_path):
-    pass
         
 def read_or_create_csv_file(filename, col_names):
     try:
@@ -248,8 +242,8 @@ def calculate_revenue_profit(bought_filename, sold_filename, inventory_filename)
     bought_data = pd.read_csv(bought_filename)
     sold_data = pd.read_csv(sold_filename)
 
-    print(f"\nfrom bought.csv:\n{line}\n{bought_data.to_string(index=False)}")
-    print(f"\nfrom sold.csv:\n{line}\n{sold_data.to_string(index=False)}")
+    print(f"\nfrom bought.csv:\n{bought_data.to_string(index=False)}")
+    print(f"\nfrom sold.csv:\n{sold_data.to_string(index=False)}")
     
     # Calculate revenue by summing the sold price multiplied by the sold amount
     sold_data['revenue'] = sold_data['sell_price'] * sold_data['sell_amount']
