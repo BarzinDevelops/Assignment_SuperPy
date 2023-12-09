@@ -22,31 +22,6 @@ console = Console()
 # This function is for investigating data in the .csv files to see if there are any data missing:
 super_config = SuperConfig()
 # ===============================================================================
-# ===============================================================================
-def calculate_revenue_profit(name, amount, price, product_inventory):
-    # Calculate revenue and profit
-    revenue = amount * price
-    profit = revenue - (amount * product_inventory['buy_price'].values[0])
-
-    # Update the management report for the sale
-    management_report_col_names = ['buy_name', 'buy_amount', 'buy_price', 'sell_amount', 'sell_price', 'is_expired', 'revenue', 'profit']
-    management_report_data = functions.read_or_create_csv_file(super_config.management_report_file, management_report_col_names)
-    
-    new_sale_entry = pd.DataFrame({
-        'buy_name': [name],
-        'buy_amount': [product_inventory['buy_amount'].values[0]],
-        'buy_price': [product_inventory['buy_price'].values[0]],
-        'sell_amount': [amount],
-        'sell_price': [price],
-        'is_expired': [False if pd.isna(product_inventory['expire_date'].values[0]) else True],
-        'revenue': [revenue],
-        'profit': [profit]
-    })
-
-    management_report_data = pd.concat([management_report_data, new_sale_entry], ignore_index=True)
-    management_report_data.to_csv(super_config.management_report_file, index=False)
-
-    return revenue, profit
 
 #==========================generating reports ======================================
 def inspection_code():
@@ -165,16 +140,17 @@ def generate_profit_report(management_report_file):
 
     for _, row in mangement_data.iterrows():
         
-        # revenue =  row['sell_price'] * row['sell_amount']
-        # total_purchase_costs = row['buy_amount_buy'] * row['buy_price_buy']
+        revenue =  row['sell_price'] * row['sell_amount']
+        total_purchase_costs = row['buy_amount_buy'] * row['buy_price_buy']
         # profit = revenue - total_purchase_costs  if (row['sell_amount'] > 0) and (row['expired_amount'] ) else 0
-                
+        profit = 0
+
         if row['expired_amount'] == 0:
             
-            revenue =  row['sell_price'] * row['sell_amount']
-            print(f"{row['buy_name_buy']} -> buy amount: {row['buy_amount_buy']}")
-            print(f"{row['buy_name_buy']} -> revenu: {revenue}")
-            total_purchase_costs = row['buy_amount_buy'] * row['buy_price_buy']
+            # revenue =  row['sell_price'] * row['sell_amount']
+            # print(f"{row['buy_name_buy']} -> buy amount: {row['buy_amount_buy']}")
+            # print(f"{row['buy_name_buy']} -> revenu: {revenue}")
+            # total_purchase_costs = row['buy_amount'] * row['buy_price']
             profit = revenue - total_purchase_costs if (row['sell_amount'] > 0) else 0
                      
             if profit == 0:
@@ -183,7 +159,7 @@ def generate_profit_report(management_report_file):
                  profit_cell_color = 'red' if profit < 0 else 'green'
         else:
             expired_loss =  row['expired_amount'] * row['buy_price_buy']
-            profit = profit - expired_loss
+            profit -= expired_loss
             profit_cell_color = 'red' if profit < 0 else 'green'
                
         
@@ -199,7 +175,7 @@ def generate_profit_report(management_report_file):
             f"[{profit_cell_color}]{profit:.2f}"
         )
     console.print(table) 
-    generate_pdf_report(mangement_data, 'profit_report')
+    # generate_pdf_report(mangement_data, 'profit_report')
     
     # ---------------------------------------------------------------------#
 def generate_pdf_report(data, report_name):
@@ -301,7 +277,8 @@ def generate_pdf_report(data, report_name):
     # Build the PDF document
     doc.build(content)
 
- 
+#  print(f"\nbought_and_inventory.columns:\n{bought_and_inventory.columns}\n\n")
+#  print(f"\nfull_data.columns:\n{full_data.columns}\n\n")
 # -------------------------------------------------------------------------------------
 
 def update_management_report():
@@ -310,26 +287,50 @@ def update_management_report():
     inventory_df = pd.read_csv(super_config.inventory_file)
     sold_df = pd.read_csv(super_config.sold_file)
 
-    # Merge 'bought_df' with 'inventory_df'
-    management_data = pd.merge(bought_df, inventory_df, on='buy_id', how='inner', suffixes=('_buy', '_inventory'))
-
-    # Merge the result with 'sold_df'
-    management_data = pd.merge(management_data, sold_df, left_on='buy_name_buy', right_on='buy_name', how='left', suffixes=('_buy', '_sold'))
-
-    # Calculate 'expired_amount' based on 'is_expired'
-    management_data['expired_amount'] = management_data.apply(
-        lambda row: row['buy_amount_inventory'] if row['is_expired'] else 0, axis=1
+    # Merge bought_df and inventory_df on 'buy_id'
+    bought_and_inventory = pd.merge(
+        bought_df, inventory_df,
+        left_on=['buy_id'],
+        right_on=['buy_id'],
+        how='left', suffixes=('_buy', '_inventory')
     )
 
-    # Fill NaN values in 'sell_amount' and 'sell_price' with 0
-    management_data[['sell_amount', 'sell_price']] = management_data[['sell_amount', 'sell_price']].fillna(0)
+    # Fill NaN values in 'is_expired' column with False
+    bought_and_inventory['is_expired'].fillna(False, inplace=True)
 
-    # Select the desired columns
-    management_data = management_data[['buy_name_buy', 'buy_amount_buy', 'buy_price_buy', 'sell_amount', 'sell_price', 'expired_amount']]
+    # Create a DataFrame for 'expired_amount'
+    expired_amount_df = bought_and_inventory[bought_and_inventory['is_expired']].groupby(['buy_name_buy', 'buy_price_buy']).size().reset_index(name='expired_amount')
 
-    # Save the result to 'management_report.csv'
-    management_data.to_csv(super_config.management_report_file, index=False)
+    # Create a DataFrame for 'buy_amount_buy'
+    buy_amount_df = bought_and_inventory.groupby(['buy_name_buy', 'buy_price_buy']).agg({'buy_amount_buy': 'sum'}).reset_index()
 
+    # Create a DataFrame for 'sell_amount' and 'sell_price'
+    sell_df = sold_df.groupby(['buy_name']).agg({'sell_amount': 'sum', 'sell_price': 'sum'}).reset_index()
+
+    # Merge the DataFrames
+    profit_report = pd.merge(buy_amount_df, sell_df, left_on=['buy_name_buy'], right_on=['buy_name'], how='left')
+    profit_report = pd.merge(profit_report, expired_amount_df, on=['buy_name_buy', 'buy_price_buy'], how='left')
+
+    # Fill NaN values in 'sell_amount', 'sell_price', and 'expired_amount' columns with 0
+    profit_report['sell_amount'].fillna(0, inplace=True)
+    profit_report['sell_price'].fillna(0, inplace=True)
+    profit_report['expired_amount'].fillna(0, inplace=True)
+
+    # Group by relevant columns and sum 'sell_amount', 'sell_price'
+    group_columns = ['buy_name_buy', 'buy_price_buy']
+    profit_report = profit_report.groupby(group_columns).agg({
+        'buy_amount_buy': 'sum',
+        'sell_amount': 'sum',
+        'sell_price': 'sum',
+        'expired_amount': 'sum',
+    }).reset_index()
+
+    # Display the Profit Report
+    print(profit_report)
+
+    # Save the updated report to a new CSV file
+    profit_report.to_csv(super_config.management_report_file, index=False,
+                         columns=['buy_name_buy', 'buy_amount_buy', 'buy_price_buy', 'sell_amount', 'sell_price', 'expired_amount'])
 
 
 # ----------------------------------------------------------------------------------

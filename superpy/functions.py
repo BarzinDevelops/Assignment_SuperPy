@@ -216,47 +216,7 @@ def update_csv_data(filename, columns, data):
         file.write(new_line)
     print(f"Updated {filename} with new data.")
     
-# ---------------------------------------------------------------------#
-def calculate_profit(amount_bought, price_bought, amount_sold, price_sold):
-    """
-    Calculate profit based on amount bought, price bought, amount sold, and price sold.
 
-    Parameters:
-    amount_bought (float): Amount of product bought.
-    price_bought (float): Price at which the product was bought.
-    amount_sold (float): Amount of product sold.
-    price_sold (float): Price at which the product was sold.
-
-    Returns:
-    float: Calculated profit.
-    """
-    revenue = amount_sold * price_sold
-    cost = amount_bought * price_bought
-    profit = revenue - cost
-
-    return profit
-# ---------------------------------------------------------------------#
-def calculate_revenue_profit(bought_filename, sold_filename, inventory_filename):
-
-    # Read bought and sold data from CSV files
-    bought_data = pd.read_csv(bought_filename)
-    sold_data = pd.read_csv(sold_filename)
-
-    print(f"\nfrom bought.csv:\n{bought_data.to_string(index=False)}")
-    print(f"\nfrom sold.csv:\n{sold_data.to_string(index=False)}")
-    
-    # Calculate revenue by summing the sold price multiplied by the sold amount
-    sold_data['revenue'] = sold_data['sell_price'] * sold_data['sell_amount']
-
-    # Merge the bought and sold data on the product name
-    merged_data = pd.merge(bought_data, sold_data, left_on='buy_name', right_on='buy_name', how='left')
-
-    # Calculate profit by subtracting the bought price multiplied by the sold amount from the revenue
-    merged_data['profit'] = merged_data['revenue'] - (merged_data['buy_price'] * merged_data['sell_amount'])
-
-    # Save the inventory data (including revenue and profit) to the inventory CSV file
-    inventory_data = merged_data[['buy_name', 'buy_amount', 'buy_price', 'revenue', 'profit']]
-    inventory_data.to_csv(inventory_filename, index=False)
 # ---------------------------------------------------------------------#
 def get_current_date():
     # setting values of a row:
@@ -413,6 +373,11 @@ def sell_action(name, amount, price):
             sold_df = pd.concat([sold_df, new_entry_df], ignore_index=True)
         else:
             sold_df.loc[sold_df['buy_name'] == name, 'sell_amount'] += amount
+            # current_amount_sold = sold_df.loc[(sold_df['buy_name'] == name), 'sell_amount'].values[0]
+            # print(f"product to sell: {name}\namount to sell: {amount}\ncurrent_amount_sold: {current_amount_sold}")
+            # if current_amount_sold < amount:
+            #     sold_df.loc[sold_df['buy_name'] == name, 'sell_amount'] += amount
+            
 
             
         sold_df.to_csv(super_config.sold_file, index=False)
@@ -420,8 +385,6 @@ def sell_action(name, amount, price):
     # Update the inventory after the sale
     update_inventory_after_sell(name, amount)
 
-    # Call the function to calculate revenue and profit
-    # revenue, profit = calculate_revenue_profit(name, amount, price, product_inventory)
 
     print("Sale successful.")
 # ---------------------------------------------------------------------#
@@ -440,7 +403,9 @@ def update_inventory_after_sell(name, amount):  # version 1
         matching_rows = inventory_data.loc[(inventory_data['buy_name'] == name) & (inventory_data['is_expired'] == False)]
         
         for i, row in matching_rows.iterrows():
-                current_amount = inventory_data.at[i, 'buy_amount']
+                # current_amount = inventory_data.at[i, 'buy_amount']
+                current_amount = row['buy_amount']
+                # print(f"current_amount: {current_amount}")
 
                 if amount <= current_amount:
                     # There is enough amount to sell

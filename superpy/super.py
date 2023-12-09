@@ -93,6 +93,7 @@ def main():
 
         elif args.report_type == 'profit':
             reporting_logic.generate_profit_report(super_config.management_report_file)
+            pass
     
         else:
             print("Invalid report type. Please choose 'inventory', 'revenue', 'profit', or 'expired.'")
