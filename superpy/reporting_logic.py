@@ -136,33 +136,24 @@ def generate_profit_report(management_report_file):
     table.add_column("Total Purchasing Costs", justify="center", style="bold", no_wrap=True)
     table.add_column("Revenue", justify="center", style="bold", no_wrap=True)
     table.add_column("Expired Amount", justify="center", style="bold", no_wrap=True)
+    table.add_column("Total Expired Costs", justify="center", style="bold", no_wrap=True)
     table.add_column("[bold]Profit/Loss[/bold]", justify="center", style="bold", no_wrap=True)
 
     for _, row in mangement_data.iterrows():
         
+        
+        profit = 0
         revenue =  row['sell_price'] * row['sell_amount']
         total_purchase_costs = row['buy_amount_buy'] * row['buy_price_buy']
-        # profit = revenue - total_purchase_costs  if (row['sell_amount'] > 0) and (row['expired_amount'] ) else 0
-        profit = 0
-
-        if row['expired_amount'] == 0:
-            
-            # revenue =  row['sell_price'] * row['sell_amount']
-            # print(f"{row['buy_name_buy']} -> buy amount: {row['buy_amount_buy']}")
-            # print(f"{row['buy_name_buy']} -> revenu: {revenue}")
-            # total_purchase_costs = row['buy_amount'] * row['buy_price']
-            profit = revenue - total_purchase_costs if (row['sell_amount'] > 0) else 0
-                     
-            if profit == 0:
-                profit_cell_color = 'blue'
-            else:
-                 profit_cell_color = 'red' if profit < 0 else 'green'
-        else:
-            expired_loss =  row['expired_amount'] * row['buy_price_buy']
-            profit -= expired_loss
-            profit_cell_color = 'red' if profit < 0 else 'green'
-               
+        total_expired_costs = row['expired_amount'] * row['buy_price_buy']
+        profit = revenue - total_purchase_costs - total_expired_costs      
         
+        if profit == 0:
+                profit_cell_color = 'blue'
+        else:
+                profit_cell_color = 'red' if profit < 0 else 'green'
+                
+                
         table.add_row(
             row['buy_name_buy'],
             f"{int(row['buy_amount_buy'])}",
@@ -172,28 +163,25 @@ def generate_profit_report(management_report_file):
             f"{total_purchase_costs:.2f}",
             f"{revenue:.2f}",
             f"{row['expired_amount']}",
+            f"{total_expired_costs:.2f}",
             f"[{profit_cell_color}]{profit:.2f}"
         )
     console.print(table) 
-    # generate_pdf_report(mangement_data, 'profit_report')
+    # generate_pdf_report()
     
-    # ---------------------------------------------------------------------#
-def generate_pdf_report(data, report_name):
+# ---------------------------------------------------------------------#
+def generate_pdf_report():
+    data = pd.read_csv(super_config.management_report_file)
+
     new_data = [["Product Name", "Buy Amount", "Buy Price", "Total Buy Costs", "Sell Amount", "Sell Price", "Revenue", "Expired Amount", "Profit"]]
-    
+
     for _, row in data.iterrows():
-        revenue = row['sell_price'] * row['sell_amount']
+        profit = 0
+        revenue =  row['sell_price'] * row['sell_amount']
         total_purchase_costs = row['buy_amount_buy'] * row['buy_price_buy']
-        profit = revenue - total_purchase_costs if (row['sell_amount'] > 0) and (row['expired_amount']) else 0
-        
-        if row['expired_amount'] == 0:
-            revenue = row['sell_price'] * row['sell_amount']
-            total_purchase_costs = row['buy_amount_buy'] * row['buy_price_buy']
-            profit = revenue - total_purchase_costs if (row['sell_amount'] > 0) else 0
-        else:
-            expired_loss = row['expired_amount'] * row['buy_price_buy']
-            profit = profit - expired_loss
-        
+        total_expired_costs = row['expired_amount'] * row['buy_price_buy']
+        profit = revenue - total_purchase_costs - total_expired_costs     
+
         new_data.append([
             row['buy_name_buy'],
             f"{int(row['buy_amount_buy'])}",
@@ -209,10 +197,9 @@ def generate_pdf_report(data, report_name):
     # Convert the list to a DataFrame
     new_data_df = pd.DataFrame(new_data[1:], columns=new_data[0])
 
-    
     # Set up PDF document
     extension = '.pdf'
-    file_path = f"outputs/PDF_reports/{report_name}{extension}"
+    file_path = f"outputs/PDF_reports/management_report{extension}"
 
     # Create the SimpleDocTemplate with the frame
     doc = SimpleDocTemplate(file_path, pagesize=landscape(A4))
@@ -220,10 +207,10 @@ def generate_pdf_report(data, report_name):
     # Create a list to hold the content of the PDF
     content = []
     styles = getSampleStyleSheet()
-    
+
     # Add additional text
-    text_to_write = "This is my report of all the bought and sold products. Also, it shows how much revenue each product has made and if any of it was expired. Based on those info, it then calculates the total profit of that product."
-    
+    text_to_write = """This is my report of all the bought and sold products. Also, it shows how much revenue each product has made and if any of it was expired. Based on those info, it then calculates the total profit of that product."""
+
     text_to_write_style = styles['Normal']
     # Modify properties
     text_to_write_style.fontName = 'Helvetica'
@@ -236,8 +223,7 @@ def generate_pdf_report(data, report_name):
     text_to_write_style.firstLineIndent = 0
     text_to_write_style.textColor = colors.navy
     text_to_write_style.alignment = 0  # 0 for left, 1 for center, 2 for right, 3 for justify
-    
-    
+
     # Add a title with a different color
     title_style = ParagraphStyle(
         'Title',
@@ -250,35 +236,70 @@ def generate_pdf_report(data, report_name):
     # Add the modified text to the content
     content.append(Paragraph(text_to_write, text_to_write_style))
 
-    # Add space after the text
-    # content.append(Spacer(100, 50))  # Adjust the value as needed for the desired space
-
-    
-    
     # Create a ReportLab table
     pdf_table = Table([list(new_data_df.columns)] + new_data_df.values.tolist())
 
+    print(f"\nnew_data_df columns:\n{new_data_df.columns}\n\n")
+    print(f"\nProfit:\n{new_data_df['Profit']}\n\n")
+    
+    def get_profit_color(profit_val, row_nr):
+        print(f"profit_val: {profit_val}")
+        print(f"row_nr: {row_nr}")
+        
+        if profit_val == 0:
+            return ('TEXTCOLOR', (-1, row_nr), (-1, -1), colors.blue),
+        elif profit_val < 0:
+            return ('TEXTCOLOR', (-1, row_nr), (-1, -1), colors.red),
+        else:
+            return ('TEXTCOLOR', (-1, row_nr), (-1, -1), colors.green),
+               
     # Apply styles to the table
-    style = TableStyle([
+    style = [
         ('BACKGROUND', (0, 0), (-1, 0), colors.navy),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # Text color for the header row
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('ALIGN', (0, 0), (0, -1), 'LEFT'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 5),
         ('BACKGROUND', (0, 1), (-1, -1), colors.lightgrey),
-    ])
+        ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),  # Text color for data rows
+        ('TEXTCOLOR', (-1, 1), (-1, -1), colors.purple),  # Text color for data rows
+    ]
 
-    pdf_table.setStyle(style)
+    
+    
+    """    
+    style = TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.navy),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # Text color for the header row
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 5),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.lightgrey),
+        ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),  # Text color for data rows
+        # [get_profit_color(float(profit_val), k+1) for k, profit_val in new_data_df['Profit'].items()]
+        # for k, profit_val in new_data_df['Profit'].items():
+        #     get_profit_color(float(profit_val), k+1)
+                
+    ]) 
+    """
+
+        # Define styles for each row based on the 'Profit' column
+    extra_style = []
+    for k, profit_val in new_data_df['Profit'].items():   
+        extra_style.append(get_profit_color(float(profit_val), k+1))
+    
+    style.extend(list(i[0] for i in extra_style))
+
+    # Apply the modified style to the table
+    pdf_table.setStyle(style)  
 
     # Add the table to the content
     content.append(pdf_table)
 
     # Build the PDF document
     doc.build(content)
-
-#  print(f"\nbought_and_inventory.columns:\n{bought_and_inventory.columns}\n\n")
-#  print(f"\nfull_data.columns:\n{full_data.columns}\n\n")
 # -------------------------------------------------------------------------------------
 
 def update_management_report():
@@ -295,11 +316,9 @@ def update_management_report():
         how='left', suffixes=('_buy', '_inventory')
     )
 
-    # Fill NaN values in 'is_expired' column with False
-    bought_and_inventory['is_expired'].fillna(False, inplace=True)
-
-    # Create a DataFrame for 'expired_amount'
-    expired_amount_df = bought_and_inventory[bought_and_inventory['is_expired']].groupby(['buy_name_buy', 'buy_price_buy']).size().reset_index(name='expired_amount')
+    # Create a DataFrame for 'expired_amount' based on 'is_expired' column
+    expired_amount_df = bought_and_inventory[bought_and_inventory['is_expired']].groupby(['buy_name_buy', 'buy_price_buy']).agg({'buy_amount_buy': 'sum'}).reset_index()
+    expired_amount_df.rename(columns={'buy_amount_buy': 'expired_amount'}, inplace=True)
 
     # Create a DataFrame for 'buy_amount_buy'
     buy_amount_df = bought_and_inventory.groupby(['buy_name_buy', 'buy_price_buy']).agg({'buy_amount_buy': 'sum'}).reset_index()
@@ -325,13 +344,9 @@ def update_management_report():
         'expired_amount': 'sum',
     }).reset_index()
 
-    # Display the Profit Report
-    print(profit_report)
-
     # Save the updated report to a new CSV file
     profit_report.to_csv(super_config.management_report_file, index=False,
                          columns=['buy_name_buy', 'buy_amount_buy', 'buy_price_buy', 'sell_amount', 'sell_price', 'expired_amount'])
-
 
 # ----------------------------------------------------------------------------------
 

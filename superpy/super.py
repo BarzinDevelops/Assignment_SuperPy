@@ -83,6 +83,8 @@ def main():
 
     elif args.action == 'report':
         functions.update_inventory_expire_status()
+        reporting_logic.update_management_report()
+        reporting_logic.generate_pdf_report()
 
         if args.report_type == 'expired':
             functions.check_expired_products() 
