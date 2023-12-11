@@ -82,9 +82,18 @@ def main():
 
 
     elif args.action == 'report':
-        functions.update_inventory_expire_status()
-        reporting_logic.update_management_report()
-        reporting_logic.generate_pdf_report()
+        try:
+            functions.update_inventory_expire_status()
+        except Exception as e:
+            print(f"Something went wrong when running this function: update_inventory_expire_status().\nError given: {e}")
+        try:
+            reporting_logic.update_management_report()
+        except Exception as e:
+            print(f"Something went wrong when running this function: update_management_report().\nError given: {e}")
+        try:
+            reporting_logic.generate_pdf_report()
+        except Exception as e:
+            print(f"Something went wrong when running this function: generate_pdf_report().\nError given: {e}")
 
         if args.report_type == 'expired':
             functions.check_expired_products() 

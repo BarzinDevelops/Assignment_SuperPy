@@ -93,7 +93,8 @@ def get_next_id(filename, id_field_name=None):
         return 1
 
 # ---------------------------------------------------------------------#
-def update_inventory(bought_file_data, amount_bought=0):
+
+def update_inventory(amount_bought=0):
     try:
         inventory_col_names = ['inventory_id', 'buy_id', 'buy_date', 'buy_name', 'buy_amount', 'buy_price', 'expire_date', 'is_expired']
         inventory_df = read_or_create_csv_file(super_config.inventory_file, inventory_col_names)
@@ -101,13 +102,9 @@ def update_inventory(bought_file_data, amount_bought=0):
     except Exception as e:
             print(f"In update_inventory ==> Exception when trying to get inventory_df from 'read_or_create_csv_file': {e}")
     try:
-        bought_df = pd.read_csv(bought_file_data)
+        bought_df = pd.read_csv(super_config.bought_file)
     except Exception as e:
         print(f"In update_inventory ==> Exception when trying to get bought_df: {e}")
-    try:
-        sold_df = pd.read_csv(super_config.sold_file)
-    except Exception as e:
-        print(f"In update_inventory ==> Exception when trying to get sold_df: {e}")
     try:        
         bought_df['inventory_id'] =  bought_df['buy_id']      
         
@@ -125,10 +122,10 @@ def update_inventory(bought_file_data, amount_bought=0):
         # Filter out rows with 'buy_amount' less than or equal to 0
         updated_data = updated_data[updated_data['buy_amount'] > 0]
         
-        # updated_data.update(inventory_df)
-        print(f"updated_data before saving to inventory.csv ---->\n{updated_data}\n\n")
         # Save the updated data to 'inventory.csv'
         updated_data.to_csv(super_config.inventory_file, index=False, mode='w', header=True)
+        
+        update_inventory_based_on_sold()
         
         # reporting_logic.update_management_report()
         return updated_data  # Return the updated inventory_data
@@ -136,7 +133,43 @@ def update_inventory(bought_file_data, amount_bought=0):
     except Exception as e:
         print("An error occurred while updating inventory ---->", e)
         return None
-  
+
+# ---------------------------------------------------------------------#
+def update_inventory_based_on_sold():
+    try:
+        sold_df = pd.read_csv(super_config.sold_file)
+    except Exception as e:
+        print(f"In update_inventory_based_on_sold ==> Exception when trying to get sold_df: {e}")
+    try:
+        inventory_df = pd.read_csv(super_config.inventory_file)
+    except Exception as e:
+        print(f"In update_inventory_based_on_sold ==> Exception when trying to get inventory_df: {e}")
+        
+    for _, sold_row in sold_df.iterrows():
+        product_name = sold_row['buy_name']
+        sell_amount = sold_row['sell_amount']
+
+        # Filter matching rows based on product name and not expired
+        matching_rows = inventory_df[(inventory_df['buy_name'] == product_name) & 
+                                     (inventory_df['is_expired'] == False)]
+
+        # Iterate through matching rows
+        for _, row in matching_rows.iterrows():
+            available_amount = row['buy_amount']
+                
+            # If available amount is greater than or equal to sell amount, update and break
+            if available_amount >= sell_amount:
+                inventory_df.loc[row.name, 'buy_amount'] -= sell_amount
+                break
+            else:
+                while(available_amount > 0):
+                    inventory_df.loc[row.name, 'buy_amount'] -= 1
+                    available_amount -= 1
+    inventory_df.to_csv(super_config.inventory_file, index=False, mode='w', header=True)   
+                # Filter out rows with 'buy_amount' less than or equal to 0
+                # inventory_df = inventory_df[inventory_df['buy_amount'] > 0]
+
+
 # ---------------------------------------------------------------------#
 def buy_product(product_name, amount, price, expire_date):
     try:
@@ -180,7 +213,7 @@ def buy_product(product_name, amount, price, expire_date):
         # Save the updated 'bought.csv' file
         bought_df.to_csv(super_config.bought_file, index=False)
                  
-        update_inventory(super_config.bought_file, amount)
+        update_inventory(amount)
     
     except Exception as e:
         print("An error occurred while buying the product ---->", e)

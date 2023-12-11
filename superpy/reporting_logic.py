@@ -77,8 +77,6 @@ def generate_inventory_report():
                 is_expired = f"[yellow1]{row['is_expired']}[/yellow1]"
             else:
                 is_expired = f"[red1]{row['is_expired']}[/red1]"
-                
-            
 
             table.add_row(product_name, amount, price, expire_date, is_expired)
 
@@ -103,18 +101,6 @@ def generate_revenue_report(management_report_file):
     for _, row in mangement_data.iterrows():
         
         revenue =  row['sell_price'] * row['sell_amount']
-        total_purchase_costs = row['buy_amount_buy'] * row['buy_price_buy']
-        profit = revenue - total_purchase_costs  if (row['sell_amount'] > 0) and (row['expired_amount'] ) else 0
-                
-        if row['expired_amount'] <= 0:
-            revenue =  row['sell_price'] * row['sell_amount']
-            total_purchase_costs = row['buy_amount_buy'] * row['buy_price_buy']
-            profit = revenue - total_purchase_costs if (row['sell_amount'] > 0) else 0
-        
-        else:
-            expired_loss =  row['expired_amount'] * row['buy_price_buy']
-            profit = profit - expired_loss
-
         table.add_row(
             row['buy_name_buy'],
             f"{row['sell_amount']:.2f}",
@@ -166,9 +152,15 @@ def generate_profit_report(management_report_file):
             f"{total_expired_costs:.2f}",
             f"[{profit_cell_color}]{profit:.2f}"
         )
-    console.print(table) 
-    # generate_pdf_report()
-    
+    console.print(table)     
+# ---------------------------------------------------------------------#
+def get_profit_color(profit_val, row_nr):       
+        if profit_val == 0:
+            return ('TEXTCOLOR', (-1, row_nr), (-1, -1), colors.blue),
+        elif profit_val < 0:
+            return ('TEXTCOLOR', (-1, row_nr), (-1, -1), colors.red),
+        else:
+            return ('TEXTCOLOR', (-1, row_nr), (-1, -1), colors.green),
 # ---------------------------------------------------------------------#
 def generate_pdf_report():
     data = pd.read_csv(super_config.management_report_file)
@@ -238,21 +230,7 @@ def generate_pdf_report():
 
     # Create a ReportLab table
     pdf_table = Table([list(new_data_df.columns)] + new_data_df.values.tolist())
-
-    print(f"\nnew_data_df columns:\n{new_data_df.columns}\n\n")
-    print(f"\nProfit:\n{new_data_df['Profit']}\n\n")
-    
-    def get_profit_color(profit_val, row_nr):
-        print(f"profit_val: {profit_val}")
-        print(f"row_nr: {row_nr}")
-        
-        if profit_val == 0:
-            return ('TEXTCOLOR', (-1, row_nr), (-1, -1), colors.blue),
-        elif profit_val < 0:
-            return ('TEXTCOLOR', (-1, row_nr), (-1, -1), colors.red),
-        else:
-            return ('TEXTCOLOR', (-1, row_nr), (-1, -1), colors.green),
-               
+                   
     # Apply styles to the table
     style = [
         ('BACKGROUND', (0, 0), (-1, 0), colors.navy),
@@ -265,27 +243,8 @@ def generate_pdf_report():
         ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),  # Text color for data rows
         ('TEXTCOLOR', (-1, 1), (-1, -1), colors.purple),  # Text color for data rows
     ]
-
     
-    
-    """    
-    style = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.navy),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # Text color for the header row
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 5),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.lightgrey),
-        ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),  # Text color for data rows
-        # [get_profit_color(float(profit_val), k+1) for k, profit_val in new_data_df['Profit'].items()]
-        # for k, profit_val in new_data_df['Profit'].items():
-        #     get_profit_color(float(profit_val), k+1)
-                
-    ]) 
-    """
-
-        # Define styles for each row based on the 'Profit' column
+    # Define styles for each row based on the 'Profit' column
     extra_style = []
     for k, profit_val in new_data_df['Profit'].items():   
         extra_style.append(get_profit_color(float(profit_val), k+1))
