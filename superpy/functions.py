@@ -98,22 +98,27 @@ def update_inventory(amount_bought=0):
     try:
         inventory_col_names = ['inventory_id', 'buy_id', 'buy_date', 'buy_name', 'buy_amount', 'buy_price', 'expire_date', 'is_expired']
         inventory_df = read_or_create_csv_file(super_config.inventory_file, inventory_col_names)
-        
     except Exception as e:
-            print(f"In update_inventory ==> Exception when trying to get inventory_df from 'read_or_create_csv_file': {e}")
+        print(f"In update_inventory ==> Exception when trying to get inventory_df from 'read_or_create_csv_file': {e}")
+        return None
     try:
         bought_df = pd.read_csv(super_config.bought_file)
     except Exception as e:
         print(f"In update_inventory ==> Exception when trying to get bought_df: {e}")
-    try:        
-        bought_df['inventory_id'] =  bought_df['buy_id']      
-        
+    
+    try:
+        bought_df['inventory_id'] = bought_df['buy_id']
+
+        # Convert 'expire_date' to datetime
+        bought_df['expire_date'] = pd.to_datetime(bought_df['expire_date'])
+
+        # Concatenate the DataFrames
         updated_data = pd.concat([inventory_df, bought_df], ignore_index=True)
-        
+
         # Update 'is_expired' status based on expiration date
         current_date = pd.to_datetime(get_current_date())
         updated_data['expire_date'] = pd.to_datetime(updated_data['expire_date'])
-        updated_data['is_expired'] = updated_data['expire_date'] < current_date
+        updated_data['is_expired'] = (updated_data['expire_date'] < current_date).astype(bool)
 
 
         # Drop duplicates based on 'buy_name' and 'expire_date' keeping the last occurrence
@@ -121,18 +126,18 @@ def update_inventory(amount_bought=0):
 
         # Filter out rows with 'buy_amount' less than or equal to 0
         updated_data = updated_data[updated_data['buy_amount'] > 0]
-        
+
         # Save the updated data to 'inventory.csv'
         updated_data.to_csv(super_config.inventory_file, index=False, mode='w', header=True)
-        
+
         update_inventory_based_on_sold()
-        
-        # reporting_logic.update_management_report()
+
         return updated_data  # Return the updated inventory_data
-        # """
     except Exception as e:
         print("An error occurred while updating inventory ---->", e)
         return None
+
+
 
 # ---------------------------------------------------------------------#
 def update_inventory_based_on_sold():

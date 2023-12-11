@@ -276,7 +276,7 @@ def update_management_report():
     )
 
     # Create a DataFrame for 'expired_amount' based on 'is_expired' column
-    expired_amount_df = bought_and_inventory[bought_and_inventory['is_expired']].groupby(['buy_name_buy', 'buy_price_buy']).agg({'buy_amount_buy': 'sum'}).reset_index()
+    expired_amount_df = bought_and_inventory[bought_and_inventory['is_expired'].fillna(False)].groupby(['buy_name_buy', 'buy_price_buy']).agg({'buy_amount_buy': 'sum'}).reset_index()
     expired_amount_df.rename(columns={'buy_amount_buy': 'expired_amount'}, inplace=True)
 
     # Create a DataFrame for 'buy_amount_buy'
