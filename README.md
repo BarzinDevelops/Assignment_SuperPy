@@ -1,73 +1,154 @@
-# Assignment_SuperPy
-WINC Assignment
 
 
-Todos:
-done -  Add function 'get_current_date()' to each sell/buy item (when getting created)
-done -  Add function 'advance_time(number)', which adds the number of days that users 
-        passes as argument (number), to the date in time.txt file.
-done -  Create function that resets the date in time.txt back to determined date:       
-        2023-01-01 as symbolic date for current day in this application.
-done -  Create function: 'update_inventory()'. It takes filename to read the data from 
-        the given argument and use it to update it's records.
-done -  Add expiredate (from buy.csv) to inventory (actually each bought item needs to 
-        be saved to inventory.csv)
-done - Add function(s) that checks the last date the code has run and compares with today.
-        if they are equal than the application date won't reset to (2023-07-01)
-        if they arn't equal, this means that the code has'nt run today, and the application date
-        will be reset to (2023-07-01). This way the application date will always start at (2023-07-01) 
-        when the application is run for the first time on each new day.
--       if an item is sold, then the inventory.csv needs to be checked first to see:
-            * if the item is still available -> 
-                - if yes, then check how many (use amount field) you can sell
-                - if not, let the user know that this item is not available anymore
-            * if the item expire date exeeded get a message? (use date from time.txt and expiredate of inventory.csv) or make a function that does this!
-            if the item can be sold, then the inventory.csv needs to be updated (for example: if 2 of 4 apples sold-> then inventory needs to have 2 apples left)
--       Find out how to adjust id's in buy/sell records that can be obtained whe items get deleted (so 
-            * if id 2 is deleted -> the next added wont get id 2 but id 3)
+<hr style='border-width: 4px; border-color: orange;'>
+<p align='center' style='font-size: 34px; color: orange; text-decoration: none; border: none; padding: 0; margin-bottom: 0'>Supermarket Inventory Tool User Guide</p>
+<hr style='border-width: 4px; border-color: orange; margin-bottom: 30px'>
+
+
+<h1 style="color: darkred; text-decoration: none; border: none; padding: 0; '">Overview</h1>
+The Supermarket Inventory Tool is a command-line application that helps you manage and analyze your supermarket inventory. This tool supports actions like buying products, selling products, advancing time, and generating various reports such as inventory, revenue, profit, and expired products.
+
+<h1 style="color: purple; text-decoration: none; border: none; padding: 0;  margin-top: 30px">Usage</h1>
+
+
+### Installation
+Before running the Supermarket Inventory Tool, make sure you have Python installed on your system. Additionally, install the required dependencies by running:
+
+```bash
+pip install -r requirements.txt
+```
+
+### Running the Tool
+
+To run the Supermarket Inventory Tool, use the following command:
+
+Replace `<action>` with the desired action (`buy`, `sell`, `time`, `report`), and provide appropriate `<arguments>` based on the chosen action.
+
+<hr style='border-width: 4px; border-color: green; margin-top: 30px'>
+<h1 style="color: green; text-decoration: none; border: none; padding: 0; margin: 0'">Actions</h1>
+<hr style='border-width: 4px; border-color: green; margin-bottom: 30px'>
+
+### **1.Buy**
+
+Use the <big>**`buy`**</big> action to purchase products and add them to the inventory. Provide the following arguments:
+
+```bash
+python super.py buy <buy_name> <buy_amount> <buy_price> <expire_date>
+```
+
+- **\<buy_name\>**: Specify the name of the product.
+- **\<buy_amount\>**: Specify the amount of the product you want.
+- **\<buy_price\>**: Specify the price of the product.
+- **\<expire_date\>**: Provide the expiration date in the format 'year-month-day'.
+
+
+Example:
+
+```bash
+super.py buy "Product Name" 10 5.99 2023-12-31 
+```
+### **2. Sell**
+Use the <big>**`sell`**</big> action to sell products and update the inventory. Provide the following arguments:
+
+```bash
+super.py sell <buy_name> <sell_amount> <sell_price>
+```
+
+
+### **2. Time**
+Use the <big>**`time`**</big> action to advance the current date in the application. Provide the following argument:
+
+
+```bash
+super.py time <advance_time>
+```
+**\<advance_time\>**: Advance the current date by a specified number of days.
+
+Example:
+
+```bash 
+python super.py time 7 
+```
+
+### **4. Report**
+Use the <big>**`report`**</big> action to generate various reports. Provide the following arguments:
+
+
+```bash
+python super.py report <report_type>
+```
+**\<report_type\>**: Choose the type of report ['inventory', 'revenue', 'profit', or 'expired'].
+
+Example:
+
+```bash 
+python super.py report inventory
+```
+
+<hr style='border-width: 4px; border-color: blue; margin-top: 30px'>
+<h1 style="color: blue; text-decoration: none; border: none; padding: 0; margin: 0'">Reports</h1>
+<hr style='border-width: 4px; border-color: blue; margin-bottom: 30px'>
+
+### **1. Inventory Report**
+Generate an inventory report to view the current state of your inventory.
+
+```bash 
+python super.py report inventory
+```
+### **2. Revenue Report**
+Generate a revenue report to analyze the revenue from product sales.
+
+```bash 
+python super.py report revenue
+```
+### **3. Profit Report**
+Generate a profit report to analyze the profit from product sales.
+
+```bash 
+python super.py report profit
+```
+### **4. Expired Products Report**
+Generate a report to identify and manage expired products in your inventory.
+
+```bash 
+python super.py report expired
+```
+
+
+<hr style='border-width: 4px; border-color: magenta; margin-top: 30px'>
+<h1 style="color: magenta; text-decoration: none; border: none; padding: 0; margin: 0'">Notes</h1>
+<hr style='border-width: 4px; border-color: magenta; margin-bottom: 30px'>
+
+- Ensure that the date in the **'time.txt'** file is updated after using the **'time'** action.
+- Reports are automatically updated in the **'outputs'** folder.
 
 
 
-$ python main.py buy --product-name orange --price 0.8 --expiration-date 2020-01-01
-OK
+<hr style='border-width: 4px; border-color: saddlebrown; margin-top: 30px'>
+<h1 style="color: saddlebrown; text-decoration: none; border: none; padding: 0; margin: 0'">Examples</h1>
+<hr style='border-width: 4px; border-color: saddlebrown; margin-bottom: 30px'>
 
-$ python main.py report inventory --now
-+--------------+-------+-----------+-----------------+
-| Product Name | Count | Buy Price | Expiration Date |
-+==============+=======+===========+=================+
-| Orange       | 1     | 0.8       | 2020-01-01      |
-+--------------+-------+-----------+-----------------+
-
-$ python main.py --advance-time 2
-OK
-
-$ python main.py report inventory --yesterday
-+--------------+-------+-----------+-----------------+
-| Product Name | Count | Buy Price | Expiration Date |
-+==============+=======+===========+=================+
-| Orange       | 1     | 0.8       | 2020-01-01      |
-+--------------+-------+-----------+-----------------+
-
-$ python main.py sell --product-name orange --price 2
-OK
-
-$ python main.py report inventory --now
-+--------------+-------+-----------+-----------------+
-| Product Name | Count | Buy Price | Expiration Date |
-+==============+=======+===========+=================+
+### **1. Buy Example**
+```bash 
+python super.py buy "Product Name" 10 5.99 2023-12-31
+```
+### **2. Sell Example**
+```bash 
+python super.py buy "Product Name" 10 5.99 2023-12-31
+```
+### **3. Time Example**
+```bash 
+python super.py time 7
+```
+### **4. Report Example**
+```bash 
+python super.py report inventory
+```
 
 
-$ python main.py report revenue --yesterday
-Yesterday's revenue: 0
+<hr style='border-width: 4px; border-color: deeppink; margin-top: 30px'>
+<h1 style="color: deeppink; text-decoration: none; border: none; padding: 0; margin: 0'">Troubleshooting</h1>
+<hr style='border-width: 4px; border-color: deeppink; margin-bottom: 30px'>
 
-$ python main.py report revenue --today
-Today's revenue so far: 2
-
-$ python main.py report revenue --date 2019-12
-Revenue from December 2019: 0
-
-$ python main.py report profit --today
-1.2
-
-$ python main.py sell --product-name orange --price 2
-ERROR: Product not in stock.
+- If you encounter any issues, ensure that you have the required dependencies installed and that your Python environment is properly set up.
+- Double-check the command syntax and provided arguments.
