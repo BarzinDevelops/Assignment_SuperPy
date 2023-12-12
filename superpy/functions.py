@@ -171,9 +171,6 @@ def update_inventory_based_on_sold():
                     inventory_df.loc[row.name, 'buy_amount'] -= 1
                     available_amount -= 1
     inventory_df.to_csv(super_config.inventory_file, index=False, mode='w', header=True)   
-                # Filter out rows with 'buy_amount' less than or equal to 0
-                # inventory_df = inventory_df[inventory_df['buy_amount'] > 0]
-
 
 # ---------------------------------------------------------------------#
 def buy_product(product_name, amount, price, expire_date):
@@ -410,20 +407,12 @@ def sell_action(name, amount, price):
             # Concatenate the new entry to 'bought.csv'
             sold_df = pd.concat([sold_df, new_entry_df], ignore_index=True)
         else:
-            sold_df.loc[sold_df['buy_name'] == name, 'sell_amount'] += amount
-            # current_amount_sold = sold_df.loc[(sold_df['buy_name'] == name), 'sell_amount'].values[0]
-            # print(f"product to sell: {name}\namount to sell: {amount}\ncurrent_amount_sold: {current_amount_sold}")
-            # if current_amount_sold < amount:
-            #     sold_df.loc[sold_df['buy_name'] == name, 'sell_amount'] += amount
-            
-
+            sold_df.loc[sold_df['buy_name'] == name, 'sell_amount'] += amount           
             
         sold_df.to_csv(super_config.sold_file, index=False)
 
     # Update the inventory after the sale
     update_inventory_after_sell(name, amount)
-
-
     print("Sale successful.")
 # ---------------------------------------------------------------------#
 

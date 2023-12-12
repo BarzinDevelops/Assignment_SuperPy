@@ -19,7 +19,6 @@ from config import SuperConfig
 
 # ===============================================================================
 console = Console()
-# This function is for investigating data in the .csv files to see if there are any data missing:
 super_config = SuperConfig()
 # ===============================================================================
 
@@ -125,9 +124,7 @@ def generate_profit_report(management_report_file):
     table.add_column("Total Expired Costs", justify="center", style="bold", no_wrap=True)
     table.add_column("[bold]Profit/Loss[/bold]", justify="center", style="bold", no_wrap=True)
 
-    for _, row in mangement_data.iterrows():
-        
-        
+    for _, row in mangement_data.iterrows():   
         profit = 0
         revenue =  row['sell_price'] * row['sell_amount']
         total_purchase_costs = row['buy_amount_buy'] * row['buy_price_buy']
@@ -138,8 +135,7 @@ def generate_profit_report(management_report_file):
                 profit_cell_color = 'blue'
         else:
                 profit_cell_color = 'red' if profit < 0 else 'green'
-                
-                
+                                
         table.add_row(
             row['buy_name_buy'],
             f"{int(row['buy_amount_buy'])}",
@@ -312,7 +308,6 @@ def update_management_report():
 def update_expired_items_in_management_report():
     # Load the inventory and sold data
     inventory_data = pd.read_csv(super_config.inventory_file)
-    sold_data = pd.read_csv(super_config.sold_file)
 
     # Identify expired products
     expired_products = inventory_data[inventory_data['is_expired']]
